@@ -1,0 +1,5 @@
+app/assets/models/*.onnx filter=lfs diff=lfs merge=lfs -text
+app/assets/models/multilingual-e5-tokenizer.json filter=lfs diff=lfs merge=lfs -text
+app/packages/onnxruntime_shared/macos/*.dylib filter=lfs diff=lfs merge=lfs -text
+app/packages/onnxruntime_shared/linux/*.so.* filter=lfs diff=lfs merge=lfs -text
+app/packages/onnxruntime_shared/windows/*.dll filter=lfs diff=lfs merge=lfs -text

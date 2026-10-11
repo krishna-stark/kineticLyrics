@@ -1,0 +1,16 @@
+CC0 1.0 Universal
+
+All original vector artwork paths in lib/visuals/context_asset_store.dart are
+dedicated to the public domain under CC0 1.0 Universal. They were authored for
+this project and contain no third-party images. This covers sun, moon, heart,
+rain, phone, door, flame, chain, rose, flower, stars, water, smoke, city, road,
+wings, eye, clock, crown, lightning, broken glass, gun, mountain, ocean, cloud, bird, butterfly, tree, leaf, lotus, river, diamond,
+key, mirror, mask, train, plane, compass, hand, guitar, raised-fist, and music-note silhouettes.
+
+Runtime-discovered artist artwork is separate from these original vectors.
+Only public-domain/CC0 transparent silhouettes from Wikimedia Commons are
+accepted; each cached result retains its source page. The verified Michael
+Jackson example is by Pintoandres91 (original) and Jovianeye (vector), public domain:
+https://commons.wikimedia.org/wiki/File:Michael_Jackson.svg
+
+Full legal terms: https://creativecommons.org/publicdomain/zero/1.0/legalcode

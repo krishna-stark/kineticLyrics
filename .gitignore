@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+tmp/
+output/
+build_resume.py
+app/dist/
