@@ -54,6 +54,9 @@ void main() {
           TextDirection.ltr,
         );
         compositions.add(composition);
+        for (final word in composition.shots.expand((shot) => shot.words)) {
+          await word.rasterize(2);
+        }
         canvas.save();
         canvas.translate(i * size.width, 0);
         LyricPerformance.paint(
