@@ -85,7 +85,12 @@ void main() {
     );
     expect(LyricComposition.fontFor(scene, semantic), 'CormorantGaramond');
     expect(
-      composition.shots.first.words.first.painter.text!.style!.fontFamily,
+      composition.shots.first.words
+          .firstWhere((w) => w.hero)
+          .painter
+          .text!
+          .style!
+          .fontFamily,
       'CormorantGaramond',
     );
     expect(composition.shots.first.transition, SemanticTransition.lift);

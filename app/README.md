@@ -257,3 +257,9 @@ Validation: 92 tests pass, static analysis is clean, and `tool/lyric_motion_revi
 ### Recovery preview 1.0.1 (build 2)
 
 Line-synced entrances now have a deliberate 60 ms word stagger and at least 260 ms travel for normal phrases (shorter for fast delivery), with legibility decoupled from movement. Missing-signal recovery is actionable even with permission granted and restarts the native output analyzer. A reconnect affordance appears only when measured audio is absent. Regression coverage checks menu opacity restoring to 1, the no-signal button, and visibly moving estimated entrances; all 92 tests pass. The review tool now renders both provider-verified and line-synced paths. The reported device signal loss remains unconfirmed until device status is supplied.
+
+### Expressive font pairs 1.0.2 (build 3)
+
+Dominant words use an expressive bundled face while supporting words use a contrasting, quieter face. Directed verses respond to the local lyric mood; refrains use display or condensed styles and retain their identity when repeated. Telugu, Tamil and Devanagari use real script-specific Noto serif/sans pairs. Fonts are prepared with glyph layout rather than downloaded during playback, and text remains flat without glass effects.
+
+Validation: all 93 tests pass, static analysis is clean, and the normal player release APK builds. The rendered performance contact sheet checks Latin and native-script verse/refrain compositions with fixture audio. Live playback and the reported missing device audio signal remain unverified remotely.

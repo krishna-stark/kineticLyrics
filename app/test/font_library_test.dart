@@ -60,6 +60,65 @@ void main() {
       }
     },
   );
+  test(
+    'hero and supporting fonts contrast without leaving the native script',
+    () {
+      for (final text in [
+        'Feel the music',
+        'ప్రేమ నీతో',
+        'காதல் நிலா',
+        'प्यार की कहानी',
+      ]) {
+        final line = LyricLine(
+          text: text,
+          start: Duration.zero,
+          end: const Duration(seconds: 5),
+        );
+        final scene = LyricScene(
+          line,
+          0,
+          LyricMood.romantic,
+          0,
+          directed: true,
+          fontSeed: 2,
+        );
+        final hero = LyricComposition.fontFor(scene);
+        final support = LyricComposition.supportFontFor(scene);
+        expect(support, isNot(hero));
+        for (final script in ['Telugu', 'Tamil', 'Devanagari']) {
+          if (hero.contains(script)) expect(support, contains(script));
+        }
+        final composition = LyricComposition.prepare(
+          LyricScene(
+            LyricTimeline(
+              provider: 'test',
+              quality: LyricsTimingQuality.lineSynced,
+              lines: [line],
+            ).enrich().lines.first,
+            0,
+            LyricMood.romantic,
+            0,
+            directed: true,
+            fontSeed: 2,
+          ),
+          const Size(270, 280),
+          TextDirection.ltr,
+        );
+        final shot = composition.shots.first;
+        expect(
+          shot.words.firstWhere((w) => w.hero).painter.text!.style!.fontFamily,
+          hero,
+        );
+        expect(
+          shot.words
+              .where((w) => !w.hero)
+              .every((w) => w.painter.text!.style!.fontFamily == support),
+          isTrue,
+        );
+        composition.dispose();
+      }
+    },
+  );
   test('expanded fonts render distinct plain white glyphs', () async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);

@@ -225,8 +225,20 @@ class LyricComposition {
   }
 
   static String fontFor(LyricScene scene, [LineSemanticProfile? semantic]) {
-    final typography =
-        !scene.directed && semantic != null && semantic.motionConfidence >= .65
+    final fast =
+        scene.line.words.isNotEmpty &&
+        (scene.line.end - scene.line.start).inMilliseconds /
+                scene.line.words.length <
+            300;
+    final typography = scene.directed && scene.refrain
+        ? (fast ? SemanticTypography.condensed : SemanticTypography.display)
+        : scene.directed &&
+              (scene.mood == LyricMood.romantic ||
+                  scene.mood == LyricMood.lonely)
+        ? SemanticTypography.elegant
+        : !scene.directed &&
+              semantic != null &&
+              semantic.motionConfidence >= .65
         ? semantic.typography
         : switch (scene.typographyMood ?? scene.mood) {
             LyricMood.romantic ||
@@ -238,17 +250,18 @@ class LyricComposition {
     final lyrical =
         typography == SemanticTypography.elegant ||
         scene.vocalRole == VocalRole.response;
+    final nativeSerif = lyrical && !scene.refrain && !fast;
     final text = scene.line.text;
     // Use real script-specific families rather than silently falling back to
     // the same system face for every Telugu/Tamil/Hindi scene.
     if (RegExp(r'[\u0C00-\u0C7F]').hasMatch(text)) {
-      return lyrical ? 'NotoSerifTelugu' : 'NotoSansTelugu';
+      return nativeSerif ? 'NotoSerifTelugu' : 'NotoSansTelugu';
     }
     if (RegExp(r'[\u0B80-\u0BFF]').hasMatch(text)) {
-      return lyrical ? 'NotoSerifTamil' : 'NotoSansTamil';
+      return nativeSerif ? 'NotoSerifTamil' : 'NotoSansTamil';
     }
     if (RegExp(r'[\u0900-\u097F]').hasMatch(text)) {
-      return lyrical ? 'NotoSerifDevanagari' : 'NotoSansDevanagari';
+      return nativeSerif ? 'NotoSerifDevanagari' : 'NotoSansDevanagari';
     }
     final choices = switch (typography) {
       SemanticTypography.condensed => const [
@@ -273,13 +286,34 @@ class LyricComposition {
         'LyricDisplay',
         'Anton',
         'Cinzel',
-        'BlackOpsOne',
+        'BodoniModa',
       ],
     };
     // Hold an authored family through a phrase block, not a random font per word.
     return choices[((scene.fontSeed ?? (scene.index ~/ 4)) +
             (scene.vocalRole == VocalRole.response ? 1 : 0)) %
         choices.length];
+  }
+
+  /// Supporting words use a quieter contrasting face, selected with script
+  /// coverage intact. A coherent pair replaces random per-word font changes.
+  static String supportFontFor(
+    LyricScene scene, [
+    LineSemanticProfile? semantic,
+  ]) {
+    final hero = fontFor(scene, semantic);
+    if (hero.contains('Telugu')) {
+      return hero == 'NotoSerifTelugu' ? 'NotoSansTelugu' : 'NotoSerifTelugu';
+    }
+    if (hero.contains('Tamil')) {
+      return hero == 'NotoSerifTamil' ? 'NotoSansTamil' : 'NotoSerifTamil';
+    }
+    if (hero.contains('Devanagari')) {
+      return hero == 'NotoSerifDevanagari'
+          ? 'NotoSansDevanagari'
+          : 'NotoSerifDevanagari';
+    }
+    return hero == 'SpaceGrotesk' ? 'PlayfairDisplay' : 'SpaceGrotesk';
   }
 
   static LyricComposition prepare(
@@ -290,6 +324,7 @@ class LyricComposition {
   }) {
     final family = familyFor(scene, semantic);
     final font = fontFor(scene, semantic);
+    final supportFont = supportFontFor(scene, semantic);
     final source = scene.line.words;
     if (source.isEmpty) return LyricComposition([]);
     // Short successive shots replace a shrinking, ever longer paragraph.
@@ -351,13 +386,13 @@ class LyricComposition {
             ? 100.0
             : 34.0;
         TextStyle style(double size) => TextStyle(
-          fontFamily: font,
+          fontFamily: i == hero ? font : supportFont,
           fontSize: size,
           height:
               RegExp(r'[\u0900-\u097F\u0B80-\u0C7F]').hasMatch(group[i].text)
               ? 1.18
               : 1.04,
-          fontWeight: FontWeight.w700,
+          fontWeight: i == hero ? FontWeight.w700 : FontWeight.w500,
           letterSpacing:
               RegExp(r'[\u0900-\u097F\u0B80-\u0C7F]').hasMatch(group[i].text)
               ? 0

@@ -81,7 +81,10 @@ void main() {
       );
       expect(score.scenes[6].refrain, isFalse);
       expect(score.scenes[7].refrain, isFalse);
-      expect(score.scenes.map(LyricComposition.fontFor).toSet().length, 1);
+      expect(
+        score.scenes.map(LyricComposition.fontFor).toSet().length,
+        greaterThan(1),
+      );
     },
   );
   test(
