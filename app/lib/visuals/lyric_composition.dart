@@ -250,7 +250,14 @@ class LyricComposition {
     final lyrical =
         typography == SemanticTypography.elegant ||
         scene.vocalRole == VocalRole.response;
-    final nativeSerif = lyrical && !scene.refrain && !fast;
+    // Change at prepared phrase boundaries, never during a word or audio tick.
+    // Refrains retain their authored identity across repeat occurrences.
+    final phraseVariant = scene.directed && !scene.refrain
+        ? scene.index ~/ 4
+        : 0;
+    final nativeSerif =
+        !scene.refrain &&
+        (phraseVariant.isOdd ? !(lyrical && !fast) : lyrical && !fast);
     final text = scene.line.text;
     // Use real script-specific families rather than silently falling back to
     // the same system face for every Telugu/Tamil/Hindi scene.
@@ -279,8 +286,9 @@ class LyricComposition {
       ],
       SemanticTypography.soft => const [
         'SpaceGrotesk',
-        'Oswald',
+        'DancingScript',
         'PlayfairDisplay',
+        'Anton',
       ],
       SemanticTypography.display => const [
         'LyricDisplay',
@@ -291,6 +299,7 @@ class LyricComposition {
     };
     // Hold an authored family through a phrase block, not a random font per word.
     return choices[((scene.fontSeed ?? (scene.index ~/ 4)) +
+            phraseVariant +
             (scene.vocalRole == VocalRole.response ? 1 : 0)) %
         choices.length];
   }
@@ -368,6 +377,9 @@ class LyricComposition {
       }
       for (var i = 0; i < group.length; i++) {
         final isHero = i == hero;
+        final displayText = isHero && font != 'DancingScript'
+            ? group[i].text.toUpperCase()
+            : group[i].text;
         final paired = rows.firstWhere((row) => row.contains(i)).length > 1;
         final sculpted =
             family == CompositionFamily.sculpture && group.length > 2;
@@ -397,7 +409,7 @@ class LyricComposition {
               RegExp(r'[\u0900-\u097F\u0B80-\u0C7F]').hasMatch(group[i].text)
               ? 0
               : isHero
-              ? -size * .035
+              ? (font == 'Anton' || font == 'DancingScript' ? 0 : -size * .015)
               : size * .015,
           color: Colors.white,
           fontFamilyFallback: const [
@@ -409,10 +421,7 @@ class LyricComposition {
         );
         final painter = TextPainter(
           textDirection: direction,
-          text: TextSpan(
-            text: isHero ? group[i].text.toUpperCase() : group[i].text,
-            style: style(100),
-          ),
+          text: TextSpan(text: displayText, style: style(100)),
         )..layout();
         final fontSize = math.min(
           ceiling,
@@ -422,10 +431,7 @@ class LyricComposition {
               ) *
               100,
         );
-        painter.text = TextSpan(
-          text: isHero ? group[i].text.toUpperCase() : group[i].text,
-          style: style(fontSize),
-        );
+        painter.text = TextSpan(text: displayText, style: style(fontSize));
         painter.layout();
         painters.add(painter);
       }

@@ -263,3 +263,7 @@ Line-synced entrances now have a deliberate 60 ms word stagger and at least 260 
 Dominant words use an expressive bundled face while supporting words use a contrasting, quieter face. Directed verses respond to the local lyric mood; refrains use display or condensed styles and retain their identity when repeated. Telugu, Tamil and Devanagari use real script-specific Noto serif/sans pairs. Fonts are prepared with glyph layout rather than downloaded during playback, and text remains flat without glass effects.
 
 Validation: all 93 tests pass, static analysis is clean, and the normal player release APK builds. The rendered performance contact sheet checks Latin and native-script verse/refrain compositions with fixture audio. Live playback and the reported missing device audio signal remain unverified remotely.
+
+### Visible phrase variation 1.0.3 (build 4)
+
+The main font now changes every four prepared verse lines even when the song has a uniform mood. Repeated refrains keep their identity. Quiet Latin phrases include clearly contrasting sans, cursive, serif and condensed faces; native scripts vary serif/sans at the same boundaries. Cursive dominant words retain their original case, and tracking preserves their natural joins. Duplicate font registrations in the manifest are removed. All 94 regression tests pass; `tool/font_variation_review_test.dart` renders successive phrase variants with the production renderer.

@@ -87,6 +87,26 @@ void main() {
       );
     },
   );
+  test('uniform verses still vary main fonts at phrase boundaries', () {
+    for (final prefix in [
+      'A new sentence',
+      'కొత్త పదం',
+      'புதிய சொல்',
+      'नया शब्द',
+    ]) {
+      final score = SongScore.prepare(
+        timeline([for (var i = 0; i < 16; i++) '$prefix $i']),
+        identity: 'Uniform verse',
+      );
+      final fonts = score.scenes.map(LyricComposition.fontFor).toList();
+      expect(fonts.take(4).toSet(), hasLength(1));
+      expect(fonts[4], isNot(fonts[0]));
+      expect(fonts.toSet().length, greaterThanOrEqualTo(2));
+      if (prefix == 'A new sentence') {
+        expect(fonts.toSet().length, greaterThanOrEqualTo(3));
+      }
+    }
+  });
   test(
     'literal native object changes promptly and unsupported context expires',
     () {
