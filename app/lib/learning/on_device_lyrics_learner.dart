@@ -8,6 +8,7 @@ import 'generated_lyrics_store.dart';
 import 'on_device_recognition_worker.dart';
 import 'playback_pcm_capture.dart';
 import 'whisper_model_pack.dart';
+import 'transcript_quality.dart';
 
 enum LearningState {
   idle,
@@ -25,12 +26,14 @@ class LearningStatus {
     this.progress = 0,
     this.message,
     this.partialTimeline,
+    this.trackKey,
   });
 
   final LearningState state;
   final double progress;
   final String? message;
   final LyricTimeline? partialTimeline;
+  final String? trackKey;
 }
 
 abstract interface class LyricsLearner {
@@ -45,8 +48,12 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     required this.store,
     PlaybackPcmCapture? capture,
     WhisperModelPack? models,
+    Future<RecognitionWorker> Function(WhisperModelFiles)? workerFactory,
+    DateTime Function()? now,
   }) : _capture = capture ?? PlaybackPcmCapture(),
-       _models = models ?? WhisperModelPack();
+       _models = models ?? WhisperModelPack(),
+       _workerFactory = workerFactory ?? OnDeviceRecognitionWorker.start,
+       _now = now ?? DateTime.now;
 
   // Whisper needs enough musical context to separate a sung phrase from the
   // backing track. Two-second clips frequently returned an empty transcript.
@@ -55,15 +62,20 @@ class OnDeviceLyricsLearner implements LyricsLearner {
   final GeneratedLyricsStore store;
   final PlaybackPcmCapture _capture;
   final WhisperModelPack _models;
+  final Future<RecognitionWorker> Function(WhisperModelFiles) _workerFactory;
+  final DateTime Function() _now;
   final _status = StreamController<LearningStatus>.broadcast();
   final List<double> _buffer = [];
   final List<_TranscriptSection> _sections = [];
   final List<Future<void>> _pending = [];
   StreamSubscription<PcmChunk>? _audioSubscription;
-  OnDeviceRecognitionWorker? _worker;
+  RecognitionWorker? _worker;
   TrackIdentity? _track;
   Duration _captureStart = Duration.zero;
   var _submittedSamples = 0;
+  DateTime? _requestedAt;
+  bool _anchored = false;
+  bool _acceptResults = false;
   var _generation = 0;
   Future<LyricTimeline?>? _finishing;
 
@@ -78,6 +90,9 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     final generation = ++_generation;
     _track = track;
     _captureStart = currentPosition;
+    _requestedAt = _now();
+    _anchored = false;
+    _acceptResults = true;
     _submittedSamples = 0;
     _sections.clear();
     _buffer.clear();
@@ -93,7 +108,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
         },
       );
       if (generation != _generation) return;
-      final worker = await OnDeviceRecognitionWorker.start(files);
+      final worker = await _workerFactory(files);
       if (generation != _generation) {
         await worker.dispose();
         return;
@@ -101,7 +116,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
       _worker = worker;
       _audioSubscription = _capture.chunks.listen(_onPcm);
       _emit(const LearningStatus(LearningState.awaitingCapturePermission));
-      await _capture.start();
+      await _capture.start(sourcePackage: track.sourcePackage);
       if (generation != _generation) {
         await _capture.stop();
         return;
@@ -109,7 +124,8 @@ class OnDeviceLyricsLearner implements LyricsLearner {
       _emit(
         const LearningStatus(
           LearningState.listening,
-          message: 'Listening locally — the first line can take 6–10 seconds.',
+          message:
+              'Learning a draft for replay. The first phrase needs at least six seconds of audio.',
         ),
       );
     } catch (error) {
@@ -133,6 +149,17 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     if (chunk.sampleRate != 16000 || _worker == null || _finishing != null) {
       return;
     }
+    if (!_anchored) {
+      // Anchor the FIRST captured audio, after model setup and user consent.
+      final delay = _now().difference(_requestedAt!);
+      final chunkDuration = Duration(
+        microseconds: chunk.samples.length * 1000000 ~/ 16000,
+      );
+      _captureStart += delay > chunkDuration
+          ? delay - chunkDuration
+          : Duration.zero;
+      _anchored = true;
+    }
     _buffer.addAll(chunk.samples);
     while (_buffer.length >= _windowSamples) {
       final samples = Float32List.fromList(
@@ -151,23 +178,36 @@ class OnDeviceLyricsLearner implements LyricsLearner {
         Duration(milliseconds: _submittedSamples * 1000 ~/ 16000);
     final duration = Duration(milliseconds: samples.length * 1000 ~/ 16000);
     _submittedSamples += samples.length;
+    if (!TranscriptQuality.hasSignal(samples)) return;
+    if (_pending.length >= 2) {
+      _emit(
+        const LearningStatus(
+          LearningState.listening,
+          message:
+              'Recognition is catching up. Some audio was skipped; draft coverage is incomplete.',
+        ),
+      );
+      return;
+    }
     final job = worker
         .recognize(samples)
         .then((result) {
-          final text = _clean(result.text);
-          if (text.isNotEmpty && !_looksRepetitive(text)) {
+          if (!_acceptResults) return;
+          final text = TranscriptQuality.clean(result.text);
+          if (TranscriptQuality.accepts(text)) {
             _sections.add(
               _TranscriptSection(
                 text,
                 offset,
                 duration,
-                _timedWords(result, text, offset, duration),
+                TranscriptQuality.timedWords(result, text, offset, duration),
               ),
             );
             _emit(
               LearningStatus(
                 LearningState.listening,
-                message: 'On-device lyrics are appearing live.',
+                message:
+                    'AI draft captured for replay. Words may be inaccurate.',
                 partialTimeline: _buildTimeline(),
               ),
             );
@@ -181,6 +221,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
           }
         })
         .catchError((Object error) {
+          if (!_acceptResults) return;
           _emit(
             LearningStatus(
               LearningState.unavailable,
@@ -211,7 +252,10 @@ class OnDeviceLyricsLearner implements LyricsLearner {
       _emit(const LearningStatus(LearningState.finalizing));
       if (_buffer.length >= 16000) _submit(Float32List.fromList(_buffer));
       _buffer.clear();
-      await Future.wait(List.of(_pending)).catchError((_) => <void>[]);
+      await Future.wait(
+        List.of(_pending),
+      ).timeout(const Duration(seconds: 20)).catchError((_) => <void>[]);
+      _acceptResults = false;
       final timeline = _buildTimeline();
       if (timeline != null) {
         await store.save(track, timeline);
@@ -229,6 +273,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
       );
       return null;
     } finally {
+      _acceptResults = false;
       _buffer.clear();
       await _worker?.dispose();
       _worker = null;
@@ -253,7 +298,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
             start: lineStart,
             end: lineEnd,
             words: group,
-            confidence: .68,
+            confidence: .4,
             provenance: TimingProvenance.speechRecognition,
           ),
         );
@@ -267,71 +312,18 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     );
   }
 
-  String _clean(String value) => value
-      .replaceAll(RegExp(r'\[[^\]]+\]'), ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
-
-  bool _looksRepetitive(String value) {
-    final words = value.toLowerCase().split(' ');
-    if (words.length < 6) return false;
-    final counts = <String, int>{};
-    for (final word in words) {
-      counts[word] = (counts[word] ?? 0) + 1;
-    }
-    return counts.values.reduce((a, b) => a > b ? a : b) / words.length > .55;
-  }
-
-  List<LyricWord> _timedWords(
-    RecognitionResult result,
-    String text,
-    Duration offset,
-    Duration duration,
-  ) {
-    final words = text
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty)
-        .toList();
-    if (words.isEmpty) return const [];
-    final timestamps = result.timestamps
-        .where((value) => value.isFinite && value >= 0)
-        .toList();
-    final usableTimestamps = timestamps.length >= words.length
-        ? timestamps.take(words.length).toList()
-        : const <double>[];
-    return [
-      for (var index = 0; index < words.length; index++)
-        (() {
-          final relativeStart = usableTimestamps.isEmpty
-              ? _fraction(duration, index, words.length)
-              : Duration(
-                  milliseconds: (usableTimestamps[index] * 1000).round(),
-                );
-          final relativeEnd = usableTimestamps.isEmpty
-              ? _fraction(duration, index + 1, words.length)
-              : index + 1 < usableTimestamps.length
-              ? Duration(
-                  milliseconds: (usableTimestamps[index + 1] * 1000).round(),
-                )
-              : duration;
-          final safeEnd = relativeEnd > relativeStart
-              ? relativeEnd
-              : relativeStart + const Duration(milliseconds: 120);
-          return LyricWord(
-            text: words[index],
-            start: offset + relativeStart,
-            end: offset + safeEnd,
-            confidence: usableTimestamps.isEmpty ? .48 : .72,
-            provenance: usableTimestamps.isEmpty
-                ? TimingProvenance.estimated
-                : TimingProvenance.speechRecognition,
-          );
-        })(),
-    ];
-  }
-
   void _emit(LearningStatus value) {
-    if (!_status.isClosed) _status.add(value);
+    if (!_status.isClosed) {
+      _status.add(
+        LearningStatus(
+          value.state,
+          progress: value.progress,
+          message: value.message,
+          partialTimeline: value.partialTimeline,
+          trackKey: _track?.cacheKey,
+        ),
+      );
+    }
   }
 
   @override
@@ -339,9 +331,6 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     await finish(stopCapture: true);
     await _status.close();
   }
-
-  Duration _fraction(Duration value, int numerator, int denominator) =>
-      Duration(microseconds: value.inMicroseconds * numerator ~/ denominator);
 }
 
 String _friendlyLearningError(Object error, {bool duringRecognition = false}) {
@@ -349,6 +338,9 @@ String _friendlyLearningError(Object error, {bool duringRecognition = false}) {
     return 'The model or saved lyrics could not be accessed. Check free storage and retry.';
   }
   final detail = error.toString().toLowerCase();
+  if (detail.contains('selected music app')) {
+    return 'The selected music app could not be captured on this device. Published lyrics remain available.';
+  }
   if (detail.contains('permission') ||
       detail.contains('denied') ||
       detail.contains('capture')) {

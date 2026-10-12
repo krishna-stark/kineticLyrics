@@ -25,19 +25,19 @@ class WhisperModelPack {
   }
 
   static const _root =
-      'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-tiny/resolve/main';
+      'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/resolve/main';
 
   Future<WhisperModelFiles> ensureInstalled({
     void Function(double progress)? onProgress,
   }) async {
     final generation = _generation;
     final support = await getApplicationSupportDirectory();
-    final directory = Directory('${support.path}/models/whisper-tiny-int8');
+    final directory = Directory('${support.path}/models/whisper-base-int8');
     await directory.create(recursive: true);
     final files = <String, int>{
-      'tiny-encoder.int8.onnx': 10 * 1024 * 1024,
-      'tiny-decoder.int8.onnx': 70 * 1024 * 1024,
-      'tiny-tokens.txt': 100 * 1024,
+      'base-encoder.int8.onnx': 20 * 1024 * 1024,
+      'base-decoder.int8.onnx': 110 * 1024 * 1024,
+      'base-tokens.txt': 100 * 1024,
     };
     var finished = 0;
     for (final entry in files.entries) {
@@ -49,13 +49,16 @@ class WhisperModelPack {
         });
       }
       if (generation != _generation) throw StateError('Download cancelled');
+      if (await target.length() < entry.value) {
+        throw const HttpException('Model download was incomplete. Retry.');
+      }
       finished++;
       onProgress?.call(finished / files.length);
     }
     return WhisperModelFiles(
-      encoder: '${directory.path}/tiny-encoder.int8.onnx',
-      decoder: '${directory.path}/tiny-decoder.int8.onnx',
-      tokens: '${directory.path}/tiny-tokens.txt',
+      encoder: '${directory.path}/base-encoder.int8.onnx',
+      decoder: '${directory.path}/base-decoder.int8.onnx',
+      tokens: '${directory.path}/base-tokens.txt',
     );
   }
 
@@ -70,15 +73,19 @@ class WhisperModelPack {
     _activeClient = client;
     IOSink? sink;
     try {
-      final request = await client.getUrl(Uri.parse(source));
+      final request = await client
+          .getUrl(Uri.parse(source))
+          .timeout(const Duration(seconds: 20));
       request.headers.set(HttpHeaders.userAgentHeader, 'KineticLyrics/1.0');
-      final response = await request.close();
+      final response = await request.close().timeout(
+        const Duration(seconds: 20),
+      );
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('Model download failed: ${response.statusCode}');
       }
       sink = partial.openWrite();
       var received = 0;
-      await for (final bytes in response) {
+      await for (final bytes in response.timeout(const Duration(seconds: 30))) {
         received += bytes.length;
         sink.add(bytes);
         if (response.contentLength > 0) {
@@ -88,6 +95,9 @@ class WhisperModelPack {
       await sink.flush();
       await sink.close();
       sink = null;
+      if (response.contentLength > 0 && received != response.contentLength) {
+        throw const HttpException('Model download was incomplete. Retry.');
+      }
       await partial.rename(target.path);
     } finally {
       await sink?.close();

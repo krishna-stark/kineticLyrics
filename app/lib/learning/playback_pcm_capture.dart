@@ -37,7 +37,7 @@ class PlaybackPcmCapture {
       })
       .asBroadcastStream();
 
-  Future<void> start() async {
+  Future<void> start({String? sourcePackage}) async {
     final ready = Completer<void>();
     late final StreamSubscription<Map<Object?, Object?>> subscription;
     subscription = _rawEvents.listen(
@@ -62,7 +62,9 @@ class PlaybackPcmCapture {
       },
     );
     try {
-      await _methods.invokeMethod<void>('startCapture');
+      await _methods.invokeMethod<void>('startCapture', {
+        'sourcePackage': sourcePackage,
+      });
       await ready.future.timeout(
         const Duration(seconds: 45),
         onTimeout: () => throw TimeoutException(

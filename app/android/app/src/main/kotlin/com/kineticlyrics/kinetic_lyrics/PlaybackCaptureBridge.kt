@@ -28,7 +28,7 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
     private val running = AtomicBoolean(false)
     private val main = Handler(Looper.getMainLooper())
     private var requestPending = false
-    private var deniedForSession = false
+    private var captureUid: Int? = null
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         sink = events
@@ -38,29 +38,37 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
         sink = null
     }
 
-    fun request(activity: Activity) {
+    fun request(activity: Activity, sourcePackage: String?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             sink?.error("unsupported", "Playback capture requires Android 10 or newer", null)
             return
         }
-        if (running.get()) {
+        if (requestPending) return
+        val uid = try {
+            require(!sourcePackage.isNullOrBlank()) { "No selected music app" }
+            @Suppress("DEPRECATION")
+            activity.packageManager.getApplicationInfo(sourcePackage, 0).uid
+        } catch (error: Exception) {
+            sink?.error("capture_source", "The selected music app cannot be captured: ${error.message}", null)
+            return
+        }
+        if (running.get() && captureUid == uid) {
             sink?.success(mapOf("state" to "capturing"))
             return
         }
-        if (requestPending) return
-        if (deniedForSession) {
-            sink?.success(mapOf("state" to "denied"))
-            return
-        }
+        stop()
+        captureUid = uid
         requestPending = true
         val manager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE)
             as MediaProjectionManager
         activity.startActivityForResult(manager.createScreenCaptureIntent(), requestCode)
     }
 
-    fun permissionResult(granted: Boolean) {
+    fun permissionResult(granted: Boolean): Boolean {
+        val stillRequested = requestPending
         requestPending = false
-        if (!granted) deniedForSession = true
+        if (stillRequested && !granted) sink?.success(mapOf("state" to "denied"))
+        return stillRequested
     }
 
     fun start(
@@ -87,6 +95,7 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
         projection = mediaProjection
         mediaProjection.registerCallback(object : MediaProjection.Callback() {
             override fun onStop() {
+                if (projection !== mediaProjection) return
                 stop()
                 main.post { sink?.success(mapOf("state" to "stopped")) }
                 onStopped()
@@ -94,9 +103,10 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
         }, main)
 
         try {
+            val uid = requireNotNull(captureUid) { "No selected music app" }
             val captureConfig = AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
+                .addMatchingUid(uid)
                 .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-                .addMatchingUsage(AudioAttributes.USAGE_GAME)
                 .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
                 .build()
             val format = AudioFormat.Builder()
@@ -139,11 +149,13 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
                 "sampleRate" to sampleRate,
                 "samples" to bytes.array(),
             )
-            main.post { sink?.success(payload) }
+            main.post {
+                if (running.get() && recorder === audioRecord) sink?.success(payload)
+            }
         }
     }
 
-    fun stop() {
+    fun stop(notify: Boolean = false) {
         requestPending = false
         running.set(false)
         val audioRecord = recorder
@@ -157,5 +169,6 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
         val mediaProjection = projection
         projection = null
         mediaProjection?.stop()
+        if (notify) sink?.success(mapOf("state" to "stopped"))
     }
 }

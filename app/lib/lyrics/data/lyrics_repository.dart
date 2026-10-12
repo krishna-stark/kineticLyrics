@@ -12,17 +12,29 @@ class LyricsRepository {
   Future<LyricTimeline?> find(TrackIdentity track) async {
     if (_cache.containsKey(track.cacheKey)) return _cache[track.cacheKey];
     var failed = false;
+    LyricTimeline? fallback;
     for (final provider in _providers) {
       try {
         final result = await provider.find(track);
         if (result != null) {
-          _cache[track.cacheKey] = result;
-          return result;
+          if (result.quality == LyricsTimingQuality.lineSynced ||
+              result.quality == LyricsTimingQuality.wordSynced) {
+            _cache[track.cacheKey] = result;
+            return result;
+          }
+          if (fallback == null ||
+              result.quality == LyricsTimingQuality.unsynced) {
+            fallback = result;
+          }
         }
       } catch (_) {
         // Continue through local and remote sources before reporting a failure.
         failed = true;
       }
+    }
+    if (fallback != null) {
+      _cache[track.cacheKey] = fallback;
+      return fallback;
     }
     if (failed) throw const LyricsLookupException();
     return null;

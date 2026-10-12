@@ -151,11 +151,11 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startCapture" -> {
-                    PlaybackCaptureBridge.request(this)
+                    PlaybackCaptureBridge.request(this, call.argument<String>("sourcePackage"))
                     result.success(null)
                 }
                 "stopCapture" -> {
-                    PlaybackCaptureBridge.stop()
+                    PlaybackCaptureBridge.stop(notify = true)
                     stopService(Intent(this, PlaybackCaptureService::class.java))
                     result.success(null)
                 }
@@ -213,10 +213,10 @@ class MainActivity : FlutterActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PlaybackCaptureBridge.requestCode) {
-            PlaybackCaptureBridge.permissionResult(
+            val stillRequested = PlaybackCaptureBridge.permissionResult(
                 resultCode == RESULT_OK && data != null,
             )
-            if (resultCode == RESULT_OK && data != null) {
+            if (stillRequested && resultCode == RESULT_OK && data != null) {
                 val service = Intent(this, PlaybackCaptureService::class.java)
                     .putExtra(PlaybackCaptureService.extraResultCode, resultCode)
                     .putExtra(PlaybackCaptureService.extraPermissionData, data)

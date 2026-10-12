@@ -233,64 +233,72 @@ void main() {
     await detector.close();
   });
 
-  test('partial on-device AI lyrics immediately become available', () async {
-    final detector = _FakeNowPlayingDetector();
-    final learner = _FakeLearner();
-    final controller = KineticLyricsController(
-      nowPlaying: detector,
-      lyrics: LyricsRepository(providers: const [_MissingProvider()]),
-      learner: learner,
-    )..initialize();
+  test(
+    'AI drafts keep the song clock and reject stale track results',
+    () async {
+      final detector = _FakeNowPlayingDetector();
+      final learner = _FakeLearner();
+      final controller = KineticLyricsController(
+        nowPlaying: detector,
+        lyrics: LyricsRepository(providers: const [_MissingProvider()]),
+        learner: learner,
+      )..initialize();
 
-    detector.add(
-      NowPlayingSnapshot(
-        access: NowPlayingAccess.granted,
-        track: NowPlayingTrack(
-          sourcePackage: 'player',
-          sourceName: 'Player',
-          title: 'Recovered Song',
-          artist: 'Artist',
-          album: null,
-          duration: const Duration(minutes: 3),
-          position: const Duration(seconds: 8),
-          playbackSpeed: 1,
-          state: PlaybackStatus.playing,
-          receivedAt: DateTime.now(),
+      detector.add(
+        NowPlayingSnapshot(
+          access: NowPlayingAccess.granted,
+          track: NowPlayingTrack(
+            sourcePackage: 'player',
+            sourceName: 'Player',
+            title: 'Recovered Song',
+            artist: 'Artist',
+            album: null,
+            duration: const Duration(minutes: 3),
+            position: const Duration(seconds: 8),
+            playbackSpeed: 1,
+            state: PlaybackStatus.playing,
+            receivedAt: DateTime.now(),
+          ),
         ),
-      ),
-    );
-    await _settle();
+      );
+      await _settle();
 
-    const partial = LyricTimeline(
-      provider: 'on-device-ai',
-      quality: LyricsTimingQuality.estimated,
-      lines: [
-        LyricLine(
-          text: 'a recovered lyric',
-          start: Duration(seconds: 7),
-          end: Duration(seconds: 10),
+      const partial = LyricTimeline(
+        provider: 'on-device-ai',
+        quality: LyricsTimingQuality.estimated,
+        lines: [
+          LyricLine(
+            text: 'a recovered lyric',
+            start: Duration(seconds: 7),
+            end: Duration(seconds: 10),
+          ),
+        ],
+      );
+      learner.emit(
+        const LearningStatus(
+          LearningState.listening,
+          partialTimeline: partial,
+          trackKey: 'a different song',
         ),
-      ],
-    );
-    learner.emit(
-      const LearningStatus(LearningState.listening, partialTimeline: partial),
-    );
-    await _settle();
+      );
+      await _settle();
+      expect(controller.timeline, isNull);
+      learner.emit(
+        const LearningStatus(LearningState.listening, partialTimeline: partial),
+      );
+      await _settle();
 
-    expect(controller.lyricsState, LyricsLoadState.ready);
-    expect(controller.timeline, partial);
-    expect(
-      controller.learningPreviewPosition,
-      isNotNull,
-      reason: 'Freshly transcribed lyrics must remain visible despite ASR lag.',
-    );
-    expect(
-      controller.learningPreviewPosition!,
-      greaterThanOrEqualTo(partial.lines.last.start),
-    );
-    controller.dispose();
-    await detector.close();
-  });
+      expect(controller.lyricsState, LyricsLoadState.ready);
+      expect(controller.timeline, partial);
+      expect(
+        controller.learningPreviewPosition,
+        isNull,
+        reason: 'Delayed ASR must never replace the actual song clock.',
+      );
+      controller.dispose();
+      await detector.close();
+    },
+  );
 }
 
 class _TestAudio implements AudioAnalyzer {

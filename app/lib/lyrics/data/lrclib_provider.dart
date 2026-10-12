@@ -23,19 +23,50 @@ class LrcLibProvider implements LyricsProvider {
       if (track.artist.isNotEmpty) 'artist_name': track.artist,
       if (track.album?.isNotEmpty == true) 'album_name': track.album!,
     };
-    final uri = Uri.https('lrclib.net', '/api/search', parameters);
-    final response = await _client.get(uri);
-    if (response is! List) return null;
-
-    final candidates = response
-        .whereType<Map>()
-        .map((value) => Map<String, Object?>.from(value))
-        .where((value) => value['instrumental'] != true)
-        .toList();
-    if (candidates.isEmpty) return null;
+    final queries = [
+      parameters,
+      {
+        'track_name': _lookupTitle(track.title),
+        if (track.artist.isNotEmpty) 'artist_name': track.artist,
+      },
+      {'q': '${_lookupTitle(track.title)} ${track.artist}'.trim()},
+    ];
+    final candidates = <Map<String, Object?>>[];
+    final seen = <String>{};
+    Object? lastError;
+    for (final query in queries) {
+      if (!seen.add(query.toString())) continue;
+      try {
+        final response = await _client.get(
+          Uri.https('lrclib.net', '/api/search', query),
+        );
+        if (response is! List) continue;
+        candidates.addAll(
+          response
+              .whereType<Map>()
+              .map((value) => Map<String, Object?>.from(value))
+              .where(
+                (value) =>
+                    value['instrumental'] != true && _score(value, track) >= 50,
+              ),
+        );
+        if (candidates.any(
+          (value) =>
+              (value['syncedLyrics'] as String?)?.trim().isNotEmpty == true,
+        )) {
+          break;
+        }
+      } catch (error) {
+        lastError = error;
+        break; // Metadata retries cannot repair an unavailable service.
+      }
+    }
+    if (candidates.isEmpty) {
+      if (lastError != null) throw lastError;
+      return null;
+    }
     candidates.sort((a, b) => _score(b, track).compareTo(_score(a, track)));
     final winner = candidates.first;
-    if (_score(winner, track) < 35) return null;
 
     final synced = winner['syncedLyrics'] as String?;
     if (synced?.trim().isNotEmpty == true) {
@@ -79,15 +110,27 @@ class LrcLibProvider implements LyricsProvider {
 
   int _score(Map<String, Object?> candidate, TrackIdentity track) {
     final candidateTitle = TrackIdentity.normalize(
-      candidate['trackName'] as String? ?? '',
+      _lookupTitle(candidate['trackName'] as String? ?? ''),
     );
     final candidateArtist = TrackIdentity.normalize(
       candidate['artistName'] as String? ?? '',
     );
-    final wantedTitle = TrackIdentity.normalize(track.title);
+    final wantedTitle = TrackIdentity.normalize(_lookupTitle(track.title));
     final wantedArtist = TrackIdentity.normalize(track.artist);
 
     var score = 0;
+    if (wantedTitle.isEmpty ||
+        candidateTitle.isEmpty ||
+        candidateTitle != wantedTitle) {
+      return -1000;
+    }
+    if (wantedArtist.isNotEmpty &&
+        (candidateArtist.isEmpty ||
+            !(candidateArtist == wantedArtist ||
+                candidateArtist.contains(wantedArtist) ||
+                wantedArtist.contains(candidateArtist)))) {
+      return -1000;
+    }
     if (candidateTitle == wantedTitle) {
       score += 50;
     } else if (candidateTitle.contains(wantedTitle) ||
@@ -105,6 +148,7 @@ class LrcLibProvider implements LyricsProvider {
     final wantedDuration = track.duration?.inSeconds;
     if (candidateDuration != null && wantedDuration != null) {
       final difference = (candidateDuration - wantedDuration).abs();
+      if (difference > 10) return -1000;
       score += switch (difference) {
         <= 2 => 30,
         <= 5 => 18,
@@ -115,4 +159,15 @@ class LrcLibProvider implements LyricsProvider {
     if ((candidate['syncedLyrics'] as String?)?.isNotEmpty == true) score += 8;
     return score;
   }
+
+  static String _lookupTitle(String title) => title
+      .replaceAll(RegExp(r'\(from\s+[^)]*\)', caseSensitive: false), '')
+      .replaceAll(
+        RegExp(
+          r'\[(official\s+)?(lyric|lyrics|music|video|audio)[^]]*\]',
+          caseSensitive: false,
+        ),
+        '',
+      )
+      .trim();
 }

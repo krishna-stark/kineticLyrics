@@ -25,8 +25,8 @@ class AppComposition {
     final generated = GeneratedLyricsStore();
     final lyrics = LyricsRepository(
       providers: [
-        generated,
         LrcLibProvider(client: DartJsonHttpClient()),
+        generated,
       ],
     );
     return KineticLyricsController(

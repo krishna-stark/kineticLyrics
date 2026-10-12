@@ -208,12 +208,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                 const Icon(Icons.privacy_tip_outlined, size: 32),
                 const SizedBox(height: 16),
                 Text(
-                  'Learn lyrics on this phone',
+                  'Create a local lyric draft',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Download an approximately 80 MB model once. Android will then ask to capture playback audio.\n\nRecognition happens locally. Captured audio is never uploaded. Generated lyrics and timing are saved on this phone. Recognition may be imperfect.\n\nYou can cancel at any time and retry later.',
+                  'Download an approximately 160 MB multilingual model once. Android will then ask to capture playback audio.\n\nRecognition happens locally. Captured audio is never uploaded. AI drafts are saved for the next playback. Singing and background music can produce incorrect words. Timing is approximate.\n\nYou can cancel at any time and retry later.',
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
@@ -416,9 +416,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                               .awaitingCapturePermission =>
                                             'Approve Android playback-audio capture to continue.',
                                           LearningState.listening =>
-                                            learning.partialTimeline != null
-                                                ? 'Partial AI lyrics · timing estimated'
-                                                : 'Listening locally for a clear vocal phrase…',
+                                            learning.message ??
+                                                'Learning an unverified AI draft for replay…',
                                           LearningState.finalizing =>
                                             'Saving lyrics on this phone…',
                                           _ =>
@@ -456,7 +455,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           LyricsLoadState.error =>
                                             'Lyrics could not load. Check your connection and retry.',
                                           LyricsLoadState.ready =>
-                                            'Tap anywhere to hide controls',
+                                            c.timeline?.provider == 'on-device'
+                                                ? 'AI draft · words and timing unverified'
+                                                : 'Tap anywhere to hide controls',
                                           LyricsLoadState.idle =>
                                             'Music detected',
                                         }, textAlign: TextAlign.center),

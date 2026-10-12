@@ -52,10 +52,6 @@ class KineticLyricsController extends ChangeNotifier {
   bool _disposed = false;
   bool _acceptLearning = true;
   final MusicStateTracker _musicTracker = MusicStateTracker();
-  Duration? _learningPreviewStart;
-  Duration? _frozenPreview;
-  Duration? _learningPreviewEnd;
-  DateTime? _learningPreviewReceivedAt;
 
   NowPlayingSnapshot snapshot = NowPlayingSnapshot.checking();
   LyricsLoadState lyricsState = LyricsLoadState.idle;
@@ -67,18 +63,8 @@ class KineticLyricsController extends ChangeNotifier {
   MusicState musicState = MusicState.silent;
   LearningStatus learningStatus = const LearningStatus(LearningState.idle);
 
-  Duration? get learningPreviewPosition {
-    final start = _learningPreviewStart;
-    final end = _learningPreviewEnd;
-    final receivedAt = _learningPreviewReceivedAt;
-    if (start == null || end == null || receivedAt == null) return null;
-    if (snapshot.track?.isAdvancing != true) return _frozenPreview ?? start;
-    final elapsed = DateTime.now().difference(receivedAt);
-    if (elapsed > end - start + const Duration(seconds: 3)) return null;
-    final preview = start + elapsed;
-    final latest = end - const Duration(milliseconds: 80);
-    return preview > latest ? latest : preview;
-  }
+  // Recognition results keep the song clock; never replay old words as live.
+  Duration? get learningPreviewPosition => null;
 
   void initialize() {
     _subscription ??= _nowPlaying.snapshots.listen(
@@ -119,16 +105,19 @@ class KineticLyricsController extends ChangeNotifier {
     });
     _learningSubscription ??= _learner?.statuses.listen((status) {
       if (!_acceptLearning || _disposed) return;
+      if (status.trackKey != null &&
+          (snapshot.track == null ||
+              status.trackKey !=
+                  TrackIdentity.fromNowPlaying(snapshot.track!).cacheKey)) {
+        return;
+      }
       learningStatus = status;
-      if (status.partialTimeline != null) {
+      if (status.partialTimeline != null &&
+          (timeline == null ||
+              timeline!.quality == LyricsTimingQuality.estimated)) {
         timeline = status.partialTimeline;
-        final lines = status.partialTimeline!.lines;
-        if (lines.isNotEmpty) {
-          _frozenPreview = null;
-          _learningPreviewStart = lines.last.start;
-          _learningPreviewEnd = lines.last.end;
-          _learningPreviewReceivedAt = DateTime.now();
-        }
+        _semanticProfile = null;
+        semanticStatus = SemanticAnalysisStatus.idle;
         lyricsState = LyricsLoadState.ready;
       }
       notifyListeners();
@@ -153,19 +142,7 @@ class KineticLyricsController extends ChangeNotifier {
 
   void _onNowPlaying(NowPlayingSnapshot value) {
     final previousTrack = snapshot.track;
-    final preview = learningPreviewPosition;
-    final wasAdvancing = snapshot.track?.isAdvancing == true;
     snapshot = value;
-    if (wasAdvancing && value.track?.isAdvancing != true) {
-      _frozenPreview = preview;
-    }
-    if (!wasAdvancing &&
-        value.track?.isAdvancing == true &&
-        _frozenPreview != null) {
-      _learningPreviewStart = _frozenPreview;
-      _learningPreviewReceivedAt = DateTime.now();
-      _frozenPreview = null;
-    }
     final track = value.track;
     if (track == null) {
       _acceptLearning = false;
@@ -178,10 +155,6 @@ class KineticLyricsController extends ChangeNotifier {
       timeline = null;
       _semanticProfile = null;
       semanticStatus = SemanticAnalysisStatus.idle;
-      _frozenPreview = null;
-      _learningPreviewStart = null;
-      _learningPreviewEnd = null;
-      _learningPreviewReceivedAt = null;
       lyricsState = LyricsLoadState.idle;
       _lookupGeneration++;
       notifyListeners();
@@ -199,11 +172,9 @@ class KineticLyricsController extends ChangeNotifier {
                     .abs() >
                 1500);
     if (sought) {
-      _frozenPreview = null;
-      _learningPreviewStart = null;
-      _learningPreviewEnd = null;
-      _learningPreviewReceivedAt = null;
-      if (learningStatus.state == LearningState.listening) {
+      if (learningStatus.state == LearningState.listening ||
+          learningStatus.state == LearningState.preparingModel ||
+          learningStatus.state == LearningState.awaitingCapturePermission) {
         unawaited(cancelLearningLyrics());
       }
     }
@@ -216,19 +187,15 @@ class KineticLyricsController extends ChangeNotifier {
       audioFeatures = AudioFeatures.silent;
     }
     if (!track.isAdvancing) {
-      if (learningStatus.state == LearningState.listening) {
+      if (learningStatus.state == LearningState.listening ||
+          learningStatus.state == LearningState.preparingModel ||
+          learningStatus.state == LearningState.awaitingCapturePermission) {
         unawaited(cancelLearningLyrics());
       }
       musicState = MusicState.silent;
       audioFeatures = AudioFeatures.silent;
     }
 
-    if (identity.cacheKey != _loadedTrackKey) {
-      _frozenPreview = null;
-      _learningPreviewStart = null;
-      _learningPreviewEnd = null;
-      _learningPreviewReceivedAt = null;
-    }
     notifyListeners();
     if (identity.cacheKey != _loadedTrackKey) {
       _loadLyrics(identity);
@@ -281,6 +248,7 @@ class KineticLyricsController extends ChangeNotifier {
       if (_disposed ||
           generation != _lookupGeneration ||
           identity.cacheKey != _loadedTrackKey ||
+          !identical(timeline, lyrics) ||
           profile.trackKey != identity.cacheKey) {
         return;
       }
@@ -291,7 +259,8 @@ class KineticLyricsController extends ChangeNotifier {
     } catch (_) {
       if (_disposed ||
           generation != _lookupGeneration ||
-          identity.cacheKey != _loadedTrackKey) {
+          identity.cacheKey != _loadedTrackKey ||
+          !identical(timeline, lyrics)) {
         return;
       }
       semanticStatus = SemanticAnalysisStatus.error;

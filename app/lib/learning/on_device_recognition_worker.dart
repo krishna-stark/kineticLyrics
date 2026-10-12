@@ -18,7 +18,12 @@ class RecognitionResult {
   final List<double> timestamps;
 }
 
-class OnDeviceRecognitionWorker {
+abstract interface class RecognitionWorker {
+  Future<RecognitionResult> recognize(Float32List samples);
+  Future<void> dispose();
+}
+
+class OnDeviceRecognitionWorker implements RecognitionWorker {
   OnDeviceRecognitionWorker._();
 
   final ReceivePort _receive = ReceivePort();
@@ -40,6 +45,10 @@ class OnDeviceRecognitionWorker {
         return;
       }
       if (message is Map) {
+        if (message['startupError'] case final String error) {
+          if (!ready.isCompleted) ready.completeError(StateError(error));
+          return;
+        }
         final id = message['id'] as int;
         final completer = worker._pending.remove(id);
         if (completer == null) return;
@@ -63,10 +72,16 @@ class OnDeviceRecognitionWorker {
       'decoder': files.decoder,
       'tokens': files.tokens,
     });
-    await ready.future.timeout(const Duration(seconds: 20));
+    try {
+      await ready.future.timeout(const Duration(seconds: 20));
+    } catch (_) {
+      await worker.dispose();
+      rethrow;
+    }
     return worker;
   }
 
+  @override
   Future<RecognitionResult> recognize(Float32List samples) {
     final id = _nextId++;
     final completer = Completer<RecognitionResult>();
@@ -75,6 +90,7 @@ class OnDeviceRecognitionWorker {
     return completer.future;
   }
 
+  @override
   Future<void> dispose() async {
     _commands?.send('stop');
     _isolate?.kill(priority: Isolate.beforeNextEvent);
@@ -139,11 +155,7 @@ void _recognitionIsolate(Map<String, Object?> setup) {
       }
     });
   } catch (error) {
-    reply.send(commands.sendPort);
-    commands.listen((message) {
-      if (message is Map) {
-        reply.send({'id': message['id'], 'error': error.toString()});
-      }
-    });
+    reply.send({'startupError': error.toString()});
+    commands.close();
   }
 }

@@ -8,6 +8,8 @@ import '../lyrics/domain/lyric_timeline.dart';
 import '../lyrics/domain/track_identity.dart';
 
 class GeneratedLyricsStore implements LyricsProvider {
+  GeneratedLyricsStore({this.directory});
+  final Directory? directory;
   @override
   String get id => 'on-device';
 
@@ -18,6 +20,7 @@ class GeneratedLyricsStore implements LyricsProvider {
     try {
       final json =
           jsonDecode(await file.readAsString()) as Map<String, Object?>;
+      if (json['version'] != 2 || json['track'] != track.cacheKey) return null;
       final lines = (json['lines'] as List)
           .whereType<Map>()
           .map((raw) => _lineFromJson(Map<String, Object?>.from(raw)))
@@ -39,7 +42,7 @@ class GeneratedLyricsStore implements LyricsProvider {
     final temporary = File('${file.path}.partial');
     await temporary.writeAsString(
       jsonEncode({
-        'version': 1,
+        'version': 2,
         'track': track.cacheKey,
         'lines': timeline.lines.map(_lineToJson).toList(),
       }),
@@ -49,7 +52,7 @@ class GeneratedLyricsStore implements LyricsProvider {
   }
 
   Future<File> _fileFor(TrackIdentity track) async {
-    final root = await getApplicationSupportDirectory();
+    final root = directory ?? await getApplicationSupportDirectory();
     return File('${root.path}/learned_lyrics/${_hash(track.cacheKey)}.json');
   }
 

@@ -147,7 +147,7 @@ void main() {
     await tester.tap(find.text('Learn lyrics on device'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Learn lyrics on this phone'), findsOneWidget);
+    expect(find.text('Create a local lyric draft'), findsOneWidget);
     expect(
       find.textContaining('Captured audio is never uploaded'),
       findsOneWidget,
@@ -156,7 +156,7 @@ void main() {
     await tester.tap(find.text('Keep the instrumental experience'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Learn lyrics on this phone'), findsNothing);
+    expect(find.text('Create a local lyric draft'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     controller.dispose();

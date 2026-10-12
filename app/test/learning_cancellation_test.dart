@@ -67,7 +67,7 @@ class FakeCapture extends PlaybackPcmCapture {
   @override
   Stream<PcmChunk> get chunks => const Stream.empty();
   @override
-  Future<void> start() async {
+  Future<void> start({String? sourcePackage}) async {
     starts++;
   }
 
