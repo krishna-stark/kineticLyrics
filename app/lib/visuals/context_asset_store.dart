@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
 
 /// Bundled Apache-2.0 Noto Emoji art with original CC0 path fallbacks.
 /// SVG decoding happens once outside paint; rendering uses cached pictures.
@@ -12,12 +13,14 @@ class ContextAssetStore {
   static Set<String> get emojiIds => Set.unmodifiable(_emoji.keys);
   static Future<void> prepareEmojiArt() => _preparing ??= _prepare();
   static Future<void> _prepare() async {
-    for (final id in availableIds) {
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    for (final asset in manifest.listAssets().where(
+      (path) => path.startsWith('assets/objects/') && path.endsWith('.svg'),
+    )) {
+      final id = asset.split('/').last.replaceAll('.svg', '');
+      if (!_paths.containsKey(id)) continue;
       try {
-        _emoji[id] = await vg.loadPicture(
-          SvgAssetLoader('assets/objects/$id.svg'),
-          null,
-        );
+        _emoji[id] = await vg.loadPicture(SvgAssetLoader(asset), null);
       } catch (_) {
         // Unsupported pack entries retain their original prepared path.
       }

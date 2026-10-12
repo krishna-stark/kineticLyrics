@@ -70,7 +70,7 @@ object NowPlayingBridge : EventChannel.StreamHandler {
             val controllers = sessionManager.getActiveSessions(listenerComponent)
                 .filter { it.packageName != appContext.packageName }
             watch(controllers)
-            val selected = controllers.maxByOrNull(::score)
+            val selected = controllers.filter { title(it.metadata).isNotBlank() }.maxByOrNull(::score)
             selectedController = selected
             emit(
                 mapOf(

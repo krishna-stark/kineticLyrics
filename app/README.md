@@ -324,3 +324,5 @@ ORG_GRADLE_PROJECT_ADMOB_APP_ID='YOUR_ANDROID_ADMOB_APP_ID' flutter build apk --
 ```
 
 Keep test mode enabled for development and QA. Do not click live ads during testing. The SDK and network requests are outside the lyric rendering loop; unavailable ads leave the small slot empty and never block music controls.
+
+Release QA must include launching the minified APK on Android. The AdMob dependency brings an older Room consumer rule; `android/app/proguard-rules.pro` explicitly preserves the reflected database constructor for AGP 9 strict shrinking, matching modern Room's consumer rule.
