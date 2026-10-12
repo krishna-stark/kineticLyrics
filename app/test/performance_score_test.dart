@@ -11,6 +11,7 @@ import 'package:kinetic_lyrics/visuals/lyric_composition.dart';
 import 'package:kinetic_lyrics/visuals/lyric_performance.dart';
 import 'package:kinetic_lyrics/visuals/performance_settings.dart';
 import 'package:kinetic_lyrics/visuals/song_score.dart';
+import 'package:kinetic_lyrics/semantics/song_semantic_profile.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -182,6 +183,129 @@ void main() {
         1,
       );
       composition.dispose();
+    },
+  );
+  test(
+    'motion anticipates only verified words and keeps the final word readable',
+    () {
+      const word = LyricWord(
+        text: 'Stay',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 3),
+        confidence: .94,
+        provenance: TimingProvenance.provider,
+      );
+      const line = LyricLine(
+        text: 'Stay',
+        start: Duration(seconds: 1),
+        end: Duration(seconds: 3),
+        words: [word],
+      );
+      final scene = LyricScene(line, 0, LyricMood.romantic, 0);
+      final base = LyricComposition.prepare(
+        scene,
+        const Size(270, 280),
+        TextDirection.ltr,
+      );
+      final trajectories = <String>{};
+      for (final transition in SemanticTransition.values) {
+        final shot = LyricShot(
+          line.start,
+          line.end,
+          base.shots.first.words,
+          CompositionFamily.spotlight,
+          transition,
+        );
+        final composition = LyricComposition([shot]);
+        expect(
+          composition.visibleAt(const Duration(milliseconds: 940)),
+          contains(shot),
+        );
+        VocalWordPose sample(int ms) => VocalWordPose.sample(
+          item: shot.words.first,
+          shot: shot,
+          scene: scene,
+          position: Duration(milliseconds: ms),
+          intensity: 1,
+        );
+        final arrival = sample(940);
+        expect(arrival.opacity, greaterThan(0));
+        trajectories.add(
+          '${arrival.dx}/${arrival.dy}/${arrival.scale}/${arrival.reveal}',
+        );
+        expect(sample(1000).opacity, 1);
+        expect(sample(2999).opacity, 1);
+        expect(sample(3000).opacity, 1);
+        expect(sample(3100).opacity, inExclusiveRange(0, 1));
+        expect(
+          composition.visibleAt(const Duration(milliseconds: 3300)),
+          isEmpty,
+        );
+        final held = sample(1400);
+        sample(3100); // seek backward after an outgoing frame
+        expect(sample(1400).scale, held.scale);
+        expect(sample(1400).opacity, held.opacity);
+      }
+      expect(trajectories.length, SemanticTransition.values.length);
+      final estimated = LyricComposition.prepare(
+        LyricScene(
+          timeline(['Stay']).enrich().lines.first,
+          0,
+          LyricMood.romantic,
+          0,
+        ),
+        const Size(270, 280),
+        TextDirection.ltr,
+      );
+      expect(estimated.shots.first.motion.anticipationMs, 0);
+      expect(estimated.visibleAt(const Duration(milliseconds: -50)), isEmpty);
+      expect(
+        base.visibleAt(const Duration(milliseconds: 940), reduced: true),
+        isEmpty,
+      );
+      estimated.dispose();
+      base.dispose();
+    },
+  );
+  test(
+    'handoffs bound outgoing groups and reduced motion uses only the active shot',
+    () {
+      final scene = LyricScene(
+        timeline(['Words']).enrich().lines.first,
+        0,
+        LyricMood.urgent,
+        0,
+      );
+      final base = LyricComposition.prepare(
+        scene,
+        const Size(270, 280),
+        TextDirection.ltr,
+      );
+      final shots = [
+        for (var i = 0; i < 8; i++)
+          LyricShot(
+            Duration(milliseconds: i * 20),
+            Duration(milliseconds: (i + 1) * 20),
+            base.shots.first.words,
+            CompositionFamily.assembly,
+            SemanticTransition.slide,
+          ),
+      ];
+      final composition = LyricComposition(shots);
+      final visible = composition
+          .visibleAt(const Duration(milliseconds: 125))
+          .toList();
+      expect(
+        visible.where((s) => s.end <= const Duration(milliseconds: 125)).length,
+        2,
+      );
+      expect(
+        composition
+            .visibleAt(const Duration(milliseconds: 125), reduced: true)
+            .length,
+        1,
+      );
+      base.dispose();
     },
   );
   test(

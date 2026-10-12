@@ -590,8 +590,47 @@ class _MusicPainter extends CustomPainter {
     _background(canvas, size, features, time, scene);
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height * 2 / 3));
+    // Normal phrase handoffs retain a bounded outgoing shot, including gaps.
+    // Voice overlaps retain their existing side-by-side choreography below.
+    final outgoingIndex = scene != null ? scene.index - 1 : index;
+    if (!reduced && outgoingIndex >= 0 && outgoingIndex < scenes.length) {
+      final outgoing = scenes[outgoingIndex];
+      final shape = shapes[outgoingIndex];
+      if (shape != null &&
+          outgoing.hasLyrics &&
+          position >= outgoing.line.end &&
+          (scene == null || outgoing.vocalRole == scene.vocalRole)) {
+        LyricPerformance.paint(
+          canvas,
+          size,
+          outgoing,
+          shape,
+          position,
+          settings: settings,
+          handoff: scene != null,
+          outgoingLimit: 1,
+        );
+      }
+    }
+    final nextIndex = index + 1;
+    if (!reduced && nextIndex >= 0 && nextIndex < scenes.length) {
+      final next = scenes[nextIndex];
+      final shape = shapes[nextIndex];
+      if (shape != null &&
+          next.hasLyrics &&
+          position < next.line.start &&
+          next.line.start - position <= const Duration(milliseconds: 160)) {
+        LyricPerformance.paint(
+          canvas,
+          size,
+          next,
+          shape,
+          position,
+          settings: settings,
+        );
+      }
+    }
     if (scene != null) {
-      _history(canvas, size, scene, position);
       final previous = scene.index > 0 ? scenes[scene.index - 1] : null;
       final simultaneous =
           previous != null &&
@@ -638,6 +677,11 @@ class _MusicPainter extends CustomPainter {
           bassHit: lowHit(),
           midHit: midHit(),
           simultaneous: simultaneous,
+          outgoingLimit: scene.index > 0 ? 1 : 2,
+          handoff:
+              scene.index + 1 < scenes.length &&
+              scenes[scene.index + 1].line.start - scene.line.end <=
+                  const Duration(milliseconds: 120),
         );
       }
     }
@@ -712,31 +756,6 @@ class _MusicPainter extends CustomPainter {
         settings: settings,
       );
     }
-  }
-
-  void _history(Canvas canvas, Size size, LyricScene scene, Duration position) {
-    final millis = (scene.line.end - scene.line.start).inMilliseconds;
-    final fast =
-        scene.line.words.length > 2 && millis / scene.line.words.length < 380;
-    if (!fast || reduced) return;
-    final composition = shapes[scene.index];
-    if (composition == null) return;
-    final earlier = composition.shots
-        .where(
-          (shot) =>
-              shot.end <= position &&
-              (position - shot.end).inMilliseconds < 1000,
-        )
-        .lastOrNull;
-    if (earlier == null) return;
-    final opacity = .20 * (1 - (position - earlier.end).inMilliseconds / 1000);
-    canvas.save();
-    canvas.translate(size.width * .5, size.height * .13);
-    canvas.scale(.38);
-    for (final word in earlier.words) {
-      word.paint(canvas, opacity);
-    }
-    canvas.restore();
   }
 
   @override

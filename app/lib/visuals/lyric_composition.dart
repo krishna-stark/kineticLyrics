@@ -82,6 +82,53 @@ class LyricShot {
   final List<ComposedWord> words;
   final CompositionFamily family;
   final SemanticTransition transition;
+  late final motion = LyricMotionPlan(this);
+}
+
+/// Prepared once per shot, never shaped or inferred on the render clock.
+class LyricMotionPlan {
+  LyricMotionPlan(LyricShot shot) {
+    precise = shot.words.every(
+      (w) =>
+          w.word.confidence >= .7 &&
+          w.word.provenance != TimingProvenance.estimated,
+    );
+    fast =
+        (shot.end - shot.start).inMilliseconds /
+            math.max(1, shot.words.length) <
+        320;
+    transition = shot.transition;
+    entranceMs = fast
+        ? 100
+        : switch (transition) {
+            SemanticTransition.dissolve => 260,
+            SemanticTransition.lift => 220,
+            SemanticTransition.slide => 180,
+            SemanticTransition.impact => 150,
+            SemanticTransition.scatter => 190,
+          };
+    // Verified words settle at their vocal onset. Estimated phrases receive
+    // choreography only, with no pretence of word-accurate anticipation.
+    anticipationMs = !precise
+        ? 0
+        : fast
+        ? 70
+        : switch (transition) {
+            SemanticTransition.dissolve => 160,
+            SemanticTransition.lift => 140,
+            SemanticTransition.slide => 100,
+            SemanticTransition.impact => 110,
+            SemanticTransition.scatter => 130,
+          };
+    exitMs = fast
+        ? 150
+        : transition == SemanticTransition.dissolve
+        ? 260
+        : 220;
+  }
+  late final bool precise, fast;
+  late final SemanticTransition transition;
+  late final int entranceMs, anticipationMs, exitMs;
 }
 
 class LyricComposition {
@@ -93,6 +140,41 @@ class LyricComposition {
       if (position >= shot.start && position < shot.end) return shot;
     }
     return null;
+  }
+
+  Iterable<LyricShot> visibleAt(
+    Duration position, {
+    bool reduced = false,
+    int outgoingLimit = 2,
+  }) sync* {
+    if (reduced) {
+      final active = at(position);
+      if (active != null) yield active;
+      return;
+    }
+    // At most two outgoing groups, one active group and one anticipated group.
+    final outgoing = <LyricShot>[];
+    for (final shot in shots) {
+      if (position >= shot.end &&
+          position < shot.end + Duration(milliseconds: shot.motion.exitMs)) {
+        outgoing.add(shot);
+      }
+    }
+    for (final shot in outgoing.skip(
+      math.max(0, outgoing.length - outgoingLimit.clamp(0, 2)),
+    )) {
+      yield shot;
+    }
+    final active = at(position);
+    if (active != null) yield active;
+    for (final shot in shots) {
+      if (position < shot.start &&
+          position >=
+              shot.start - Duration(milliseconds: shot.motion.anticipationMs)) {
+        yield shot;
+        break;
+      }
+    }
   }
 
   void dispose() {
@@ -377,10 +459,19 @@ class LyricComposition {
               ComposedWord(group[i], painters[i], origins[i], i == hero, i),
           ],
           family,
-          semantic?.transition ??
-              (scene.mood == LyricMood.lonely
-                  ? SemanticTransition.dissolve
-                  : SemanticTransition.impact),
+          semantic != null && semantic.motionConfidence >= .65
+              ? semantic.transition
+              : switch (family) {
+                  CompositionFamily.intimate =>
+                    scene.mood == LyricMood.lonely
+                        ? SemanticTransition.dissolve
+                        : SemanticTransition.lift,
+                  CompositionFamily.assembly ||
+                  CompositionFamily.dialogue => SemanticTransition.slide,
+                  CompositionFamily.sculpture => SemanticTransition.scatter,
+                  CompositionFamily.monument ||
+                  CompositionFamily.spotlight => SemanticTransition.impact,
+                },
         ),
       );
     }

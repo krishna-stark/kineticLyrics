@@ -247,3 +247,9 @@ Validation: all 90 Flutter tests pass, static analysis is clean, and the normal 
 ### Cloning this repository
 
 Install Git LFS before cloning, then run `git lfs pull` from the repository root. The bundled semantic model, tokenizer and large desktop runtime libraries are stored in LFS; their full contents are required rather than pointer files. Build outputs and local configuration are excluded from Git.
+
+### Lyric motion update (12 October 2026)
+
+Prepared shot plans now drive distinct impact, slide, lift, dissolve and scatter trajectories. Verified word timing supports bounded 70–160 ms visual anticipation, settling at the vocal cue; estimated timing keeps phrase-level choreography. Lift reveals clip complete shaped words without splitting native-script glyphs. Final words retain full opacity through the nominal end, then finish an independent exit. Fast completed words recede; outgoing groups are bounded and neighboring phrases retreat gradually to make room for incoming lyrics. Reduced motion keeps the active shot stable. Live playback, saved replay and card export share the renderer.
+
+Validation: 92 tests pass, static analysis is clean, and `tool/lyric_motion_review_test.dart` captures five transition sequences with native Telugu and phrase handoffs. The normal `lib/main.dart` release APK builds successfully. Device frame profiling and real-song alignment for this update remain unverified because the phone is remote.
