@@ -103,7 +103,55 @@ void main() {
       containsAll(['rose', 'guitar', 'dancer', 'moon', 'umbrella']),
     );
   });
+  test(
+    'live art retains subtle red contours even with emoji references cached',
+    () async {
+      await ContextAssetStore.prepareEmojiArt();
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder)..drawColor(Colors.black, BlendMode.src);
+      ContextAssetStore.paint(canvas, 'rose', const Offset(50, 50), 40, .35);
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final pixels = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!.buffer.asUint8List();
+      var red = 0;
+      for (var i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] > pixels[i + 1] + 5 && pixels[i] > pixels[i + 2] + 5) {
+          red++;
+        }
+      }
+      expect(red, greaterThan(20));
+      image.dispose();
+      picture.dispose();
+    },
+  );
   for (final scale in [1.0, 2.0]) {
+    testWidgets('idle player displays a separated ad at scale $scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final detector = TransportDetector();
+      final c = KineticLyricsController(
+        nowPlaying: detector,
+        lyrics: LyricsRepository(providers: []),
+      );
+      await tester.pumpWidget(KineticLyricsApp(controller: c));
+      detector.add(const NowPlayingSnapshot(access: NowPlayingAccess.granted));
+      await tester.pump();
+      expect(find.text('Ready when the music starts'), findsOneWidget);
+      expect(tester.widget<PausedAdSlot>(find.byType(PausedAdSlot)).idle, true);
+      await tester.ensureVisible(find.text('ADVERTISEMENT'));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+      await detector.close();
+    });
     testWidgets(
       'controls seek and swipe to settings; paused info at scale $scale',
       (tester) async {

@@ -321,3 +321,5 @@ supersedes the earlier glass typography and filled spectrum bar treatment.
 ### Pause stage and contextual art refinement
 
 Contextual emoji artwork and fallback silhouettes use monochrome white/gray geometry on black; retain relevant shapes without introducing emoji colors. Pausing transitions into a full-screen black now-playing view with dominant white song information, immediate transport/seek controls, and a restrained red accent. Reserve a separate medium-rectangle advertisement area with generous distance from controls. Support scrolling on compact displays and at large text sizes. Swipe to settings; defer video interstitials while settings are open. Resuming fades back to the lyric scene and clears the control overlay. Respect reduced-motion preferences.
+
+Latest art direction: contextual objects use the original restrained white/red line art, rather than filled grayscale emoji illustrations. Give the full-screen pause stage stronger red accents on transport, progress and navigation. Include a separate advertisement placement on the nothing-playing screen.

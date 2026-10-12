@@ -132,11 +132,6 @@ class _MusicSurfaceState extends State<MusicSurface>
   @override
   void initState() {
     super.initState();
-    unawaited(
-      ContextAssetStore.prepareEmojiArt().then((_) {
-        if (mounted) _clock.value++;
-      }),
-    );
     WidgetsBinding.instance.addObserver(this);
     if (kProfileMode) {
       SchedulerBinding.instance.addTimingsCallback(_recordTimings);

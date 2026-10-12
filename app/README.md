@@ -330,3 +330,7 @@ Release QA must include launching the minified APK on Android. The AdMob depende
 ### 1.0.9 — monochrome artwork and full-screen pause
 
 All emoji artwork and fallback contours are grayscale. Pausing fades into a full-screen black now-playing stage with dominant white typography, a small red accent, a separated 300×250 medium-rectangle ad slot and immediate playback/seek controls. Swipe to settings or use the bottom page labels. Compact screens and large text scroll naturally. Resuming fades back to the lyric scene; reduced-motion settings skip the transition. Ads remain Google test creatives until production IDs are provided. Ad creative colors are controlled by the advertiser, not the app palette.
+
+### 1.0.10 — return to subtle red contours
+
+Live contextual artwork returns to the original prepared white/red contours instead of filled grayscale emoji pictures. Paused playback adds red progress, play-button and selected-tab accents while preserving white titles and a black background. The idle “Ready when the music starts” view includes a separated 300×250 ad slot. Idle and paused placements own different BannerAd instances so pause-to-idle crossfades cannot mount the same native ad twice. Google test IDs remain active.

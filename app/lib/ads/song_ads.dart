@@ -79,11 +79,11 @@ class SongAds extends ChangeNotifier {
   static String get videoId =>
       testMode ? 'ca-app-pub-3940256099942544/8691691433' : _productionVideo;
   final cadence = SongAdCadence();
-  BannerAd? banner;
+  BannerAd? banner, idleBanner;
   InterstitialAd? _video;
-  bool bannerReady = false, privacyRequired = false;
+  bool bannerReady = false, idleBannerReady = false, privacyRequired = false;
   bool _disposed = false, _ready = false, _loading = false, _showing = false;
-  Timer? _retry, _bannerRetry;
+  Timer? _retry, _bannerRetry, _idleRetry;
   int _epoch = 0;
   DateTime? _videoLoadedAt;
   Future<void> _writes = Future.value();
@@ -134,14 +134,15 @@ class SongAds extends ChangeNotifier {
     if (_disposed) return;
     _ready = true;
     _loadBanner();
+    _loadBanner(idle: true);
     _loadVideo();
     notifyListeners();
   }
 
-  void _loadBanner() {
-    if (_disposed || !_ready || banner != null) return;
+  void _loadBanner({bool idle = false}) {
+    if (_disposed || !_ready || (idle ? idleBanner : banner) != null) return;
     final epoch = _epoch;
-    banner = BannerAd(
+    final loaded = BannerAd(
       adUnitId: bannerId,
       size: AdSize.mediumRectangle,
       request: const AdRequest(),
@@ -151,19 +152,40 @@ class SongAds extends ChangeNotifier {
             ad.dispose();
             return;
           }
-          bannerReady = true;
+          if (idle) {
+            idleBannerReady = true;
+          } else {
+            bannerReady = true;
+          }
           notifyListeners();
         },
         onAdFailedToLoad: (ad, _) {
           ad.dispose();
           if (_disposed || epoch != _epoch) return;
-          banner = null;
-          _bannerRetry?.cancel();
-          _bannerRetry = Timer(const Duration(seconds: 45), _loadBanner);
+          if (idle) {
+            idleBanner = null;
+            _idleRetry?.cancel();
+            _idleRetry = Timer(
+              const Duration(seconds: 45),
+              () => _loadBanner(idle: true),
+            );
+          } else {
+            banner = null;
+            _bannerRetry?.cancel();
+            _bannerRetry = Timer(
+              const Duration(seconds: 45),
+              () => _loadBanner(),
+            );
+          }
         },
       ),
     );
-    banner!.load();
+    if (idle) {
+      idleBanner = loaded;
+    } else {
+      banner = loaded;
+    }
+    loaded.load();
   }
 
   void _loadVideo() {
@@ -292,14 +314,19 @@ class SongAds extends ChangeNotifier {
     _loading = false;
     _retry?.cancel();
     _bannerRetry?.cancel();
+    _idleRetry?.cancel();
     _video?.dispose();
     _video = null;
     banner?.dispose();
     banner = null;
     bannerReady = false;
+    idleBanner?.dispose();
+    idleBanner = null;
+    idleBannerReady = false;
     _ready = await ConsentInformation.instance.canRequestAds();
     if (_ready) {
       _loadBanner();
+      _loadBanner(idle: true);
       _loadVideo();
     }
     notifyListeners();
@@ -310,6 +337,8 @@ class SongAds extends ChangeNotifier {
     _disposed = true;
     _retry?.cancel();
     _bannerRetry?.cancel();
+    _idleRetry?.cancel();
+    idleBanner?.dispose();
     banner?.dispose();
     _video?.dispose();
     super.dispose();
@@ -317,7 +346,8 @@ class SongAds extends ChangeNotifier {
 }
 
 class PausedAdSlot extends StatelessWidget {
-  const PausedAdSlot({super.key, required this.ads});
+  const PausedAdSlot({super.key, required this.ads, this.idle = false});
+  final bool idle;
   final SongAds ads;
   @override
   Widget build(BuildContext context) => Column(
@@ -336,10 +366,10 @@ class PausedAdSlot extends StatelessWidget {
         width: 300,
         height: 250,
         child:
-            ads.bannerReady &&
-                ads.banner != null &&
+            (idle ? ads.idleBannerReady : ads.bannerReady) &&
+                (idle ? ads.idleBanner : ads.banner) != null &&
                 MediaQuery.sizeOf(context).width >= 332
-            ? AdWidget(ad: ads.banner!)
+            ? AdWidget(ad: (idle ? ads.idleBanner : ads.banner)!)
             : const DecoratedBox(
                 decoration: BoxDecoration(
                   color: Color(0xff111111),

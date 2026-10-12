@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 
-/// Bundled Apache-2.0 Noto Emoji art with original CC0 path fallbacks.
-/// SVG decoding happens once outside paint; rendering uses cached pictures.
+/// Prepared CC0 white/red contour art for live scenes.
+/// Adapted Apache-2.0 Noto Emoji references remain available for tooling.
+/// Live painting uses prepared paths, with no asset decoding in the scene.
 class ContextAssetStore {
   static const license = 'CC0-1.0'; // Original fallback paths.
   static final Map<String, PictureInfo> _emoji = {};
@@ -564,33 +565,20 @@ class ContextAssetStore {
         ? energy.clamp(0, 1) * .035
         : 0.0;
     canvas.scale(radius * (1 + pulse));
-    final emoji = _emoji[id];
-    if (emoji != null) {
-      canvas.saveLayer(
-        const Rect.fromLTWH(-1.1, -1.1, 2.2, 2.2),
-        Paint()..color = Colors.white.withValues(alpha: opacity.clamp(0, 1)),
-      );
-      canvas.scale(2 / emoji.size.width, 2 / emoji.size.height);
-      canvas.translate(-emoji.size.width / 2, -emoji.size.height / 2);
-      canvas.drawPicture(emoji.picture);
-      canvas.restore();
-      canvas.restore();
-      return;
-    }
-    // A monochrome silhouette keeps depth without adding color to the scene.
+    // Prepared white/red contour artwork matches the original scene theme.
     canvas.drawPath(
       asset.shift(const Offset(.06, .08)),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5 / math.max(1, radius)
-        ..color = const Color(0xff555555).withValues(alpha: opacity * .6),
+        ..color = const Color(0xff652626).withValues(alpha: opacity * .6),
     );
     if (id != 'rain') {
       canvas.drawPath(
         asset,
         Paint()
           ..color = const Color(
-            0xffcccccc,
+            0xffe95252,
           ).withValues(alpha: opacity * (id == 'raisedFist' ? .65 : .12)),
       );
     }
@@ -602,7 +590,7 @@ class ContextAssetStore {
         ..shader =
             ui.Gradient.linear(const Offset(-.7, -.9), const Offset(.8, .9), [
               const Color(0xffeeeeee).withValues(alpha: opacity.clamp(0, .42)),
-              const Color(0xffaaaaaa).withValues(alpha: opacity.clamp(0, .32)),
+              const Color(0xffd96161).withValues(alpha: opacity.clamp(0, .32)),
             ]),
     );
     canvas.restore();

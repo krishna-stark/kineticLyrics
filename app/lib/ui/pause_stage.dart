@@ -83,7 +83,7 @@ class _PauseStageState extends State<PauseStage> {
                                       const Text(
                                         'NOW PLAYING · PAUSED',
                                         style: TextStyle(
-                                          color: Colors.white54,
+                                          color: Color(0xffdc676d),
                                           letterSpacing: 2,
                                           fontSize: 10,
                                         ),
@@ -125,8 +125,8 @@ class _PauseStageState extends State<PauseStage> {
                                         ),
                                       const SizedBox(height: 20),
                                       Container(
-                                        width: 28,
-                                        height: 2,
+                                        width: 72,
+                                        height: 3,
                                         color: const Color(0xffd84b52),
                                       ),
                                     ],
@@ -174,7 +174,9 @@ class _PauseStageState extends State<PauseStage> {
                     child: Text(
                       'Playback',
                       style: TextStyle(
-                        color: _page == 0 ? Colors.white : Colors.white38,
+                        color: _page == 0
+                            ? const Color(0xffdc676d)
+                            : Colors.white38,
                       ),
                     ),
                   ),
@@ -183,7 +185,9 @@ class _PauseStageState extends State<PauseStage> {
                     child: Text(
                       'Settings',
                       style: TextStyle(
-                        color: _page == 1 ? Colors.white : Colors.white38,
+                        color: _page == 1
+                            ? const Color(0xffdc676d)
+                            : Colors.white38,
                       ),
                     ),
                   ),

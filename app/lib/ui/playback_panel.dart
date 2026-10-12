@@ -129,8 +129,12 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 2,
-              activeTrackColor: Colors.white,
-              thumbColor: Colors.white,
+              activeTrackColor: widget.compact
+                  ? const Color(0xffd84b52)
+                  : Colors.white,
+              thumbColor: widget.compact
+                  ? const Color(0xffd84b52)
+                  : Colors.white,
               inactiveTrackColor: Colors.white24,
             ),
             child: Slider(
@@ -188,8 +192,10 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
                 tooltip: track.isAdvancing ? 'Pause' : 'Play',
                 iconSize: 36,
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
+                  backgroundColor: widget.compact
+                      ? const Color(0xffcf3944)
+                      : Colors.white,
+                  foregroundColor: widget.compact ? Colors.white : Colors.black,
                 ),
                 onPressed: enabled && track.canToggle
                     ? () => _command(track.isAdvancing ? 'pause' : 'play')

@@ -335,7 +335,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: SafeArea(
                       child: SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.all(32),
+                          padding: EdgeInsets.all(
+                            snapshot.access == NowPlayingAccess.granted
+                                ? 16
+                                : 32,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -395,6 +399,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   onPressed: () => _action(c.refresh),
                                   child: const Text('Check again'),
                                 ),
+                              if (snapshot.access ==
+                                  NowPlayingAccess.granted) ...[
+                                const SizedBox(height: 32),
+                                PausedAdSlot(ads: _ads, idle: true),
+                                if (_ads.privacyRequired)
+                                  TextButton(
+                                    onPressed: _ads.privacyOptions,
+                                    child: const Text('Ad privacy'),
+                                  ),
+                              ],
                             ],
                           ),
                         ),
