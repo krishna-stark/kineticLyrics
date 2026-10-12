@@ -317,3 +317,7 @@ and white-to-red height gradients. Reduce animation stutter through a bounded
 lookahead window and prepared glyph textures, rather than repainting glass masks
 or bar glow each frame. Validate with physical-device frame timings. This
 supersedes the earlier glass typography and filled spectrum bar treatment.
+
+### Pause stage and contextual art refinement
+
+Contextual emoji artwork and fallback silhouettes use monochrome white/gray geometry on black; retain relevant shapes without introducing emoji colors. Pausing transitions into a full-screen black now-playing view with dominant white song information, immediate transport/seek controls, and a restrained red accent. Reserve a separate medium-rectangle advertisement area with generous distance from controls. Support scrolling on compact displays and at large text sizes. Swipe to settings; defer video interstitials while settings are open. Resuming fades back to the lyric scene and clears the control overlay. Respect reduced-motion preferences.

@@ -8,12 +8,14 @@ class PlaybackPanel extends StatefulWidget {
   const PlaybackPanel({
     super.key,
     required this.controller,
+    this.compact = false,
     required this.onSettings,
     required this.onSave,
     required this.onAudio,
     required this.onClose,
   });
   final KineticLyricsController controller;
+  final bool compact;
   final VoidCallback onSettings, onSave, onAudio, onClose;
   @override
   State<PlaybackPanel> createState() => _PlaybackPanelState();
@@ -89,33 +91,35 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Playback',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          if (!widget.compact)
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Playback',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Close controls',
-                onPressed: widget.onClose,
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-          Text(
-            track.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
+                IconButton(
+                  tooltip: 'Close controls',
+                  onPressed: widget.onClose,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
             ),
-          ),
-          if (track.artist.isNotEmpty)
+          if (!widget.compact)
+            Text(
+              track.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          if (!widget.compact && track.artist.isNotEmpty)
             Text(
               track.artist,
               maxLines: 1,
@@ -171,6 +175,8 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
             children: [
               IconButton(
                 tooltip: 'Previous song',
+                color: Colors.white,
+                disabledColor: Colors.white24,
                 iconSize: 32,
                 onPressed: enabled && track.canPrevious
                     ? () => _command('previous')
@@ -197,6 +203,8 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
               const SizedBox(width: 20),
               IconButton(
                 tooltip: 'Next song',
+                color: Colors.white,
+                disabledColor: Colors.white24,
                 iconSize: 32,
                 onPressed: enabled && track.canNext
                     ? () => _command('next')
@@ -205,53 +213,56 @@ class _PlaybackPanelState extends State<PlaybackPanel> {
               ),
             ],
           ),
-          Wrap(
-            alignment: WrapAlignment.center,
-            children: [
-              TextButton.icon(
-                onPressed: c.timeline == null ? null : widget.onSave,
-                icon: const Icon(Icons.bookmark_border),
-                label: const Text('Save moment'),
-              ),
-              TextButton.icon(
-                onPressed: c.audioSignal ? null : widget.onAudio,
-                icon: const Icon(Icons.graphic_eq),
-                label: Text(
-                  c.audioSignal
-                      ? 'Audio reaction on'
-                      : c.audioAvailable
-                      ? 'No audio signal · check volume'
-                      : 'Enable audio reaction',
+          if (!widget.compact)
+            Wrap(
+              alignment: WrapAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: c.timeline == null ? null : widget.onSave,
+                  icon: const Icon(Icons.bookmark_border),
+                  label: const Text('Save moment'),
                 ),
-              ),
-              TextButton(
-                onPressed: () => c.retryLyrics(),
-                child: const Text('Retry lyrics'),
-              ),
-            ],
-          ),
-          Text(
-            switch (c.lyricsState) {
-              LyricsLoadState.notFound =>
-                'Lyrics unavailable · instrumental experience',
-              LyricsLoadState.loading =>
-                'Finding lyrics · music visuals continue',
-              LyricsLoadState.error =>
-                'Lyrics could not load. Check your connection and retry.',
-              LyricsLoadState.ready =>
-                c.timeline?.quality == LyricsTimingQuality.unsynced
-                    ? 'Plain lyrics · scroll to read; synchronization unavailable'
-                    : 'Tap anywhere to hide controls',
-              LyricsLoadState.idle => 'Music detected',
-            },
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
-          ),
-          TextButton.icon(
-            onPressed: widget.onSettings,
-            icon: const Icon(Icons.swipe_left_alt),
-            label: const Text('Swipe for settings'),
-          ),
+                TextButton.icon(
+                  onPressed: c.audioSignal ? null : widget.onAudio,
+                  icon: const Icon(Icons.graphic_eq),
+                  label: Text(
+                    c.audioSignal
+                        ? 'Audio reaction on'
+                        : c.audioAvailable
+                        ? 'No audio signal · check volume'
+                        : 'Enable audio reaction',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => c.retryLyrics(),
+                  child: const Text('Retry lyrics'),
+                ),
+              ],
+            ),
+          if (!widget.compact)
+            Text(
+              switch (c.lyricsState) {
+                LyricsLoadState.notFound =>
+                  'Lyrics unavailable · instrumental experience',
+                LyricsLoadState.loading =>
+                  'Finding lyrics · music visuals continue',
+                LyricsLoadState.error =>
+                  'Lyrics could not load. Check your connection and retry.',
+                LyricsLoadState.ready =>
+                  c.timeline?.quality == LyricsTimingQuality.unsynced
+                      ? 'Plain lyrics · scroll to read; synchronization unavailable'
+                      : 'Tap anywhere to hide controls',
+                LyricsLoadState.idle => 'Music detected',
+              },
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          if (!widget.compact)
+            TextButton.icon(
+              onPressed: widget.onSettings,
+              icon: const Icon(Icons.swipe_left_alt),
+              label: const Text('Swipe for settings'),
+            ),
         ],
       ),
     );

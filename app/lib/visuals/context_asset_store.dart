@@ -577,20 +577,20 @@ class ContextAssetStore {
       canvas.restore();
       return;
     }
-    // A dimensional silhouette has a dark red offset face and a clear contour.
+    // A monochrome silhouette keeps depth without adding color to the scene.
     canvas.drawPath(
       asset.shift(const Offset(.06, .08)),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5 / math.max(1, radius)
-        ..color = const Color(0xff652626).withValues(alpha: opacity * .6),
+        ..color = const Color(0xff555555).withValues(alpha: opacity * .6),
     );
     if (id != 'rain') {
       canvas.drawPath(
         asset,
         Paint()
           ..color = const Color(
-            0xffe95252,
+            0xffcccccc,
           ).withValues(alpha: opacity * (id == 'raisedFist' ? .65 : .12)),
       );
     }
@@ -602,7 +602,7 @@ class ContextAssetStore {
         ..shader =
             ui.Gradient.linear(const Offset(-.7, -.9), const Offset(.8, .9), [
               const Color(0xffeeeeee).withValues(alpha: opacity.clamp(0, .42)),
-              const Color(0xffd96161).withValues(alpha: opacity.clamp(0, .32)),
+              const Color(0xffaaaaaa).withValues(alpha: opacity.clamp(0, .32)),
             ]),
     );
     canvas.restore();

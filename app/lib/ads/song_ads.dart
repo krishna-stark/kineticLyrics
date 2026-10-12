@@ -143,7 +143,7 @@ class SongAds extends ChangeNotifier {
     final epoch = _epoch;
     banner = BannerAd(
       adUnitId: bannerId,
-      size: AdSize.banner,
+      size: AdSize.mediumRectangle,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -333,16 +333,16 @@ class PausedAdSlot extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       SizedBox(
-        width: 320,
-        height: 50,
+        width: 300,
+        height: 250,
         child:
             ads.bannerReady &&
                 ads.banner != null &&
-                MediaQuery.sizeOf(context).width >= 352
+                MediaQuery.sizeOf(context).width >= 332
             ? AdWidget(ad: ads.banner!)
             : const DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Color(0xff111114),
+                  color: Color(0xff111111),
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                 ),
                 child: Center(

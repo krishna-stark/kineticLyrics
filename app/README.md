@@ -326,3 +326,7 @@ ORG_GRADLE_PROJECT_ADMOB_APP_ID='YOUR_ANDROID_ADMOB_APP_ID' flutter build apk --
 Keep test mode enabled for development and QA. Do not click live ads during testing. The SDK and network requests are outside the lyric rendering loop; unavailable ads leave the small slot empty and never block music controls.
 
 Release QA must include launching the minified APK on Android. The AdMob dependency brings an older Room consumer rule; `android/app/proguard-rules.pro` explicitly preserves the reflected database constructor for AGP 9 strict shrinking, matching modern Room's consumer rule.
+
+### 1.0.9 — monochrome artwork and full-screen pause
+
+All emoji artwork and fallback contours are grayscale. Pausing fades into a full-screen black now-playing stage with dominant white typography, a small red accent, a separated 300×250 medium-rectangle ad slot and immediate playback/seek controls. Swipe to settings or use the bottom page labels. Compact screens and large text scroll naturally. Resuming fades back to the lyric scene; reduced-motion settings skip the transition. Ads remain Google test creatives until production IDs are provided. Ad creative colors are controlled by the advertiser, not the app palette.

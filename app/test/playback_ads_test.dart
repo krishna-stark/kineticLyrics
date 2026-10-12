@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:kinetic_lyrics/ui/pause_stage.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -80,6 +81,19 @@ void main() {
     c.observe(song(now, 29, state: PlaybackStatus.paused), now);
     expect(c.completed, 0);
   });
+  test('bundled emoji palette contains no chromatic colors', () {
+    final colors = RegExp(r'#[0-9a-fA-F]{6}\b');
+    for (final file
+        in Directory('assets/objects').listSync().whereType<File>().where(
+          (file) => file.path.endsWith('.svg'),
+        )) {
+      for (final match in colors.allMatches(file.readAsStringSync())) {
+        final hex = match.group(0)!;
+        expect(hex.substring(1, 3), hex.substring(3, 5), reason: file.path);
+        expect(hex.substring(3, 5), hex.substring(5, 7), reason: file.path);
+      }
+    }
+  });
   test('all bundled contextual emoji art decodes once', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
     await ContextAssetStore.prepareEmojiArt();
@@ -134,9 +148,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
         expect(find.text('NOW PLAYING · PAUSED'), findsOneWidget);
         expect(find.text('ADVERTISEMENT'), findsOneWidget);
-        await tester.tapAt(const Offset(180, 450));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+        expect(tester.getSize(find.byType(PauseStage)), const Size(360, 780));
+        expect(
+          tester.getSize(find.byType(PausedAdSlot)).height,
+          greaterThanOrEqualTo(250),
+        );
         expect(find.byTooltip('Play'), findsOneWidget);
         await tester.ensureVisible(find.byTooltip('Play'));
         await tester.tap(find.byTooltip('Play'));
@@ -163,6 +179,19 @@ void main() {
         await tester.drag(find.byType(PageView).first, const Offset(-300, 0));
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.text('Your performance'), findsOneWidget);
+        detector.add(
+          NowPlayingSnapshot(
+            access: NowPlayingAccess.granted,
+            track: song(DateTime.now(), 10),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(find.byType(PauseStage), findsOneWidget);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(PauseStage), findsNothing);
+        expect(find.text('ADVERTISEMENT'), findsNothing);
+
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
         c.dispose();

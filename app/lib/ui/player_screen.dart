@@ -10,6 +10,7 @@ import '../lyrics/domain/lyric_timeline.dart';
 import '../app/performance_library.dart';
 import 'performance_panel.dart';
 import 'playback_panel.dart';
+import 'pause_stage.dart';
 import '../ads/song_ads.dart';
 import '../now_playing/now_playing_track.dart';
 
@@ -29,10 +30,19 @@ class _PlayerScreenState extends State<PlayerScreen>
   int _page = 0;
   bool _controlsVisible = false;
   bool _menuOpen = false;
+  bool _pausedSettings = false;
+  PlaybackStatus? _previousState;
   Timer? _hide;
   bool _foreground = true;
   bool _screenAwake = false;
   void _syncDisplay() {
+    final state = widget.controller.snapshot.track?.state;
+    if (_previousState == PlaybackStatus.paused &&
+        state != PlaybackStatus.paused) {
+      _controlsVisible = false;
+      _pausedSettings = false;
+    }
+    _previousState = state;
     final awake =
         _foreground && widget.controller.snapshot.track?.isAdvancing == true;
     if (awake == _screenAwake ||
@@ -56,7 +66,12 @@ class _PlayerScreenState extends State<PlayerScreen>
       _ads.observe(widget.controller.snapshot.track);
       _ads.maybeShow(
         foreground: _foreground,
-        menuOpen: _controlsVisible || _menuOpen,
+        menuOpen:
+            _menuOpen ||
+            _pausedSettings ||
+            (_controlsVisible &&
+                widget.controller.snapshot.track?.state !=
+                    PlaybackStatus.paused),
         track: widget.controller.snapshot.track,
       );
     });
@@ -251,12 +266,16 @@ class _PlayerScreenState extends State<PlayerScreen>
       return Scaffold(
         backgroundColor: Colors.black,
         body: Semantics(
-          button: true,
+          button: track?.state != PlaybackStatus.paused,
           explicitChildNodes: true,
-          label: _controlsVisible ? 'Hide controls' : 'Show controls',
+          label: track?.state == PlaybackStatus.paused
+              ? 'Paused player'
+              : _controlsVisible
+              ? 'Hide controls'
+              : 'Show controls',
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTap: _showControls,
+            onTap: track?.state == PlaybackStatus.paused ? null : _showControls,
             onLongPress: track != null && c.timeline != null
                 ? _saveMoment
                 : null,
@@ -382,58 +401,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                   ),
-                if (track != null && track.state == PlaybackStatus.paused)
-                  Positioned(
-                    top: MediaQuery.paddingOf(context).top + 70,
-                    left: 16,
-                    right: 16,
-                    bottom: MediaQuery.sizeOf(context).height * .53,
-                    child: Material(
-                      color: Colors.black,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'NOW PLAYING · PAUSED',
-                              style: TextStyle(
-                                color: Colors.white54,
-                                letterSpacing: 2,
-                                fontSize: 11,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              track.title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'SpaceGrotesk',
-                                fontSize: 28,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              track.artist,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            if (track.album?.isNotEmpty == true)
-                              Text(
-                                track.album!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white54),
-                              ),
-                            const SizedBox(height: 20),
-                            PausedAdSlot(ads: _ads),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                if (track != null && _controlsVisible)
+                if (track != null &&
+                    _controlsVisible &&
+                    track.state != PlaybackStatus.paused)
                   Positioned(
                     top: MediaQuery.sizeOf(context).height * .5,
                     left: 12,
@@ -532,6 +502,37 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                   ),
+                Positioned.fill(
+                  key: const ValueKey('pause-layer'),
+                  child: AnimatedSwitcher(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 420),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: const Offset(0, .018),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    ),
+                    child: track?.state == PlaybackStatus.paused
+                        ? PauseStage(
+                            key: const ValueKey('full-screen-pause'),
+                            controller: c,
+                            library: _library,
+                            ads: _ads,
+                            onSave: _saveMoment,
+                            onAudio: _audioConsent,
+                            onSettingsChanged: (open) => _pausedSettings = open,
+                          )
+                        : const IgnorePointer(child: SizedBox.shrink()),
+                  ),
+                ),
                 Positioned(
                   top: 0,
                   left: 0,
