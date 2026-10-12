@@ -37,6 +37,8 @@ void main() {
       ).enrich().lines.first;
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder)..drawColor(Colors.black, BlendMode.src);
+      final compositions = <LyricComposition>[];
+      final labels = <TextPainter>[];
       for (var i = 0; i < 4; i++) {
         final scene = LyricScene(
           line,
@@ -51,6 +53,7 @@ void main() {
           const Size(300, 350),
           TextDirection.ltr,
         );
+        compositions.add(composition);
         canvas.save();
         canvas.translate(i * size.width, 0);
         LyricPerformance.paint(
@@ -72,9 +75,8 @@ void main() {
           textDirection: TextDirection.ltr,
         )..layout();
         label.paint(canvas, const Offset(24, 460));
-        label.dispose();
+        labels.add(label);
         canvas.restore();
-        composition.dispose();
       }
       final picture = recorder.endRecording();
       final image = await picture.toImage(1440, 640);
@@ -82,6 +84,12 @@ void main() {
       final output = File('build/review/font-phrase-variants.png');
       await output.parent.create(recursive: true);
       await output.writeAsBytes(bytes!.buffer.asUint8List());
+      for (final composition in compositions) {
+        composition.dispose();
+      }
+      for (final label in labels) {
+        label.dispose();
+      }
       image.dispose();
       picture.dispose();
     },
