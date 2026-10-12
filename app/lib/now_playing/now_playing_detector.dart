@@ -17,7 +17,17 @@ abstract interface class NowPlayingDetector {
   }
 }
 
-final class AndroidNowPlayingDetector implements NowPlayingDetector {
+abstract interface class PlaybackTransport {
+  Future<bool> transport(
+    String action, {
+    required String sourcePackage,
+    required String title,
+    int? positionMs,
+  });
+}
+
+final class AndroidNowPlayingDetector
+    implements NowPlayingDetector, PlaybackTransport {
   static const _methods = MethodChannel('kinetic_lyrics/now_playing/methods');
   static const _events = EventChannel('kinetic_lyrics/now_playing/events');
 
@@ -37,6 +47,21 @@ final class AndroidNowPlayingDetector implements NowPlayingDetector {
 
   @override
   Future<void> refresh() => _methods.invokeMethod('refresh');
+
+  @override
+  Future<bool> transport(
+    String action, {
+    required String sourcePackage,
+    required String title,
+    int? positionMs,
+  }) async =>
+      await _methods.invokeMethod<bool>('transport', {
+        'action': action,
+        'sourcePackage': sourcePackage,
+        'title': title,
+        'positionMs': ?positionMs,
+      }) ??
+      false;
 
   @override
   void dispose() {}

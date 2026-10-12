@@ -9,6 +9,9 @@ import '../visuals/song_score.dart';
 import '../lyrics/domain/lyric_timeline.dart';
 import '../app/performance_library.dart';
 import 'performance_panel.dart';
+import 'playback_panel.dart';
+import '../ads/song_ads.dart';
+import '../now_playing/now_playing_track.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key, required this.controller});
@@ -20,6 +23,10 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen>
     with WidgetsBindingObserver {
   final _library = PerformanceLibrary();
+  final _pages = PageController();
+  final _ads = SongAds();
+  Timer? _adClock;
+  int _page = 0;
   bool _controlsVisible = false;
   bool _menuOpen = false;
   Timer? _hide;
@@ -43,6 +50,16 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
+    _ads.addListener(_libraryChanged);
+    unawaited(_ads.initialize().catchError((_) {}));
+    _adClock = Timer.periodic(const Duration(seconds: 1), (_) {
+      _ads.observe(widget.controller.snapshot.track);
+      _ads.maybeShow(
+        foreground: _foreground,
+        menuOpen: _controlsVisible || _menuOpen,
+        track: widget.controller.snapshot.track,
+      );
+    });
     WidgetsBinding.instance.addObserver(this);
     widget.controller.addListener(_syncDisplay);
     _syncDisplay();
@@ -57,6 +74,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void dispose() {
     _hide?.cancel();
+    _adClock?.cancel();
+    _ads.removeListener(_libraryChanged);
+    _ads.dispose();
+    _pages.dispose();
     _library.removeListener(_libraryChanged);
     _library.dispose();
     widget.controller.removeListener(_syncDisplay);
@@ -79,11 +100,17 @@ class _PlayerScreenState extends State<PlayerScreen>
     setState(() => _controlsVisible = !_controlsVisible);
     _hide?.cancel();
     if (_controlsVisible) {
-      _hide = Timer(const Duration(seconds: 7), () {
-        if (mounted) setState(() => _controlsVisible = false);
-      });
+      _page = 0;
+      if (_pages.hasClients) _pages.jumpToPage(0);
     }
   }
+
+  void _closeControls() => setState(() => _controlsVisible = false);
+  void _settings() => _pages.animateToPage(
+    1,
+    duration: const Duration(milliseconds: 280),
+    curve: Curves.easeOutCubic,
+  );
 
   Future<void> _performance() async {
     _hide?.cancel();
@@ -355,99 +382,129 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                   ),
+                if (track != null && track.state == PlaybackStatus.paused)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + 70,
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.sizeOf(context).height * .53,
+                    child: Material(
+                      color: Colors.black,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            const Text(
+                              'NOW PLAYING · PAUSED',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                letterSpacing: 2,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              track.title,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontFamily: 'SpaceGrotesk',
+                                fontSize: 28,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              track.artist,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            if (track.album?.isNotEmpty == true)
+                              Text(
+                                track.album!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white54),
+                              ),
+                            const SizedBox(height: 20),
+                            PausedAdSlot(ads: _ads),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 if (track != null && _controlsVisible)
                   Positioned(
                     top: MediaQuery.sizeOf(context).height * .5,
-                    left: 16,
-                    right: 16,
+                    left: 12,
+                    right: 12,
                     bottom: 12,
                     child: SafeArea(
                       top: false,
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Material(
-                          color: const Color(0xf2111114),
-                          borderRadius: BorderRadius.circular(18),
-                          clipBehavior: Clip.antiAlias,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
+                      child: Material(
+                        color: const Color(0xff111114),
+                        borderRadius: BorderRadius.circular(20),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: PageView(
+                                controller: _pages,
+                                onPageChanged: (page) =>
+                                    setState(() => _page = page),
+                                children: [
+                                  PlaybackPanel(
+                                    controller: c,
+                                    onSettings: _settings,
+                                    onClose: _closeControls,
+                                    onSave: _saveMoment,
+                                    onAudio: _audioConsent,
+                                  ),
+                                  PerformancePanel(
+                                    library: _library,
+                                    heightFraction: .5,
+                                    onClose: _closeControls,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Wrap(
+                              alignment: WrapAlignment.center,
                               children: [
-                                if (_controlsVisible)
-                                  Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(switch (c.lyricsState) {
-                                          LyricsLoadState.loading =>
-                                            'Finding lyrics · music visuals continue',
-                                          LyricsLoadState.notFound =>
-                                            'Lyrics unavailable · instrumental experience',
-                                          LyricsLoadState.error =>
-                                            'Lyrics could not load. Check your connection and retry.',
-                                          LyricsLoadState.ready =>
-                                            c.timeline?.quality ==
-                                                    LyricsTimingQuality.unsynced
-                                                ? 'Plain lyrics · scroll to read; synchronization unavailable'
-                                                : 'Tap anywhere to hide controls',
-                                          LyricsLoadState.idle =>
-                                            'Music detected',
-                                        }, textAlign: TextAlign.center),
-                                        if (_controlsVisible ||
-                                            c.lyricsState ==
-                                                LyricsLoadState.error)
-                                          TextButton(
-                                            onPressed: () =>
-                                                _action(c.retryLyrics),
-                                            child: const Text('Retry lyrics'),
-                                          ),
-                                      ],
+                                TextButton(
+                                  onPressed: () => _pages.animateToPage(
+                                    0,
+                                    duration: const Duration(milliseconds: 280),
+                                    curve: Curves.easeOutCubic,
+                                  ),
+                                  child: Text(
+                                    'Playback',
+                                    style: TextStyle(
+                                      color: _page == 0
+                                          ? Colors.white
+                                          : Colors.white38,
                                     ),
                                   ),
-                                if (_controlsVisible)
-                                  Wrap(
-                                    alignment: WrapAlignment.center,
-                                    spacing: 8,
-                                    children: [
-                                      TextButton.icon(
-                                        onPressed: _performance,
-                                        icon: const Icon(Icons.tune),
-                                        label: const Text('Style and moments'),
-                                      ),
-                                      TextButton.icon(
-                                        onPressed: c.timeline == null
-                                            ? null
-                                            : _saveMoment,
-                                        icon: const Icon(Icons.bookmark_border),
-                                        label: const Text('Save moment'),
-                                      ),
-                                    ],
-                                  ),
-                                if (_controlsVisible)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: TextButton.icon(
-                                      onPressed: widget.controller.audioSignal
-                                          ? null
-                                          : _audioConsent,
-                                      icon: Icon(
-                                        widget.controller.audioAvailable
-                                            ? Icons.check
-                                            : Icons.graphic_eq,
-                                      ),
-                                      label: Text(
-                                        widget.controller.audioAvailable
-                                            ? widget.controller.audioSignal
-                                                  ? 'Audio reaction on'
-                                                  : 'No audio signal · check volume'
-                                            : 'Enable audio reaction',
-                                      ),
+                                ),
+                                TextButton(
+                                  onPressed: _settings,
+                                  child: Text(
+                                    'Settings',
+                                    style: TextStyle(
+                                      color: _page == 1
+                                          ? Colors.white
+                                          : Colors.white38,
                                     ),
+                                  ),
+                                ),
+                                if (_ads.privacyRequired)
+                                  TextButton(
+                                    onPressed: _ads.privacyOptions,
+                                    child: const Text('Ad privacy'),
                                   ),
                               ],
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),

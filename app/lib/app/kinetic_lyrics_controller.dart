@@ -207,6 +207,23 @@ class KineticLyricsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get transportAvailable => _nowPlaying is PlaybackTransport;
+  Future<void> controlPlayback(String action, {Duration? position}) async {
+    final track = snapshot.track;
+    final transport = _nowPlaying;
+    if (track == null || transport is! PlaybackTransport) {
+      throw StateError('Playback control is unavailable');
+    }
+    if (!await (transport as PlaybackTransport).transport(
+      action,
+      sourcePackage: track.sourcePackage,
+      title: track.title,
+      positionMs: position?.inMilliseconds,
+    )) {
+      throw StateError('The music player did not accept this action');
+    }
+  }
+
   Future<void> enableAudioReaction() async {
     try {
       await _audio.requestAccess();

@@ -8,6 +8,7 @@ import 'package:kinetic_lyrics/visuals/context_asset_store.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('review prepared contextual object artwork at production opacity', () async {
+    await ContextAssetStore.prepareEmojiArt();
     await (FontLoader('SpaceGrotesk')..addFont(rootBundle.load('assets/fonts/SpaceGrotesk.ttf'))).load();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..drawColor(Colors.black, BlendMode.src);

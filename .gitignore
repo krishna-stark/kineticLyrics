@@ -4,3 +4,5 @@ tmp/
 output/
 build_resume.py
 app/dist/
+
+app/android/.kotlin/

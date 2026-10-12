@@ -139,6 +139,14 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(null)
                 }
+                "transport" -> {
+                    result.success(NowPlayingBridge.transport(
+                        call.argument<String>("action") ?: "",
+                        call.argument<String>("sourcePackage"),
+                        call.argument<String>("title"),
+                        call.argument<Number>("positionMs")?.toLong(),
+                    ))
+                }
                 "refresh" -> {
                     NowPlayingBridge.refresh()
                     result.success(null)

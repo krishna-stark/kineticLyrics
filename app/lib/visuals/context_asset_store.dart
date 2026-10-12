@@ -1,10 +1,29 @@
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-/// Original, prepared CC0 vector artwork. No downloads or generation in paint.
+/// Bundled Apache-2.0 Noto Emoji art with original CC0 path fallbacks.
+/// SVG decoding happens once outside paint; rendering uses cached pictures.
 class ContextAssetStore {
-  static const license = 'CC0-1.0';
+  static const license = 'CC0-1.0'; // Original fallback paths.
+  static final Map<String, PictureInfo> _emoji = {};
+  static Future<void>? _preparing;
+  static Set<String> get emojiIds => Set.unmodifiable(_emoji.keys);
+  static Future<void> prepareEmojiArt() => _preparing ??= _prepare();
+  static Future<void> _prepare() async {
+    for (final id in availableIds) {
+      try {
+        _emoji[id] = await vg.loadPicture(
+          SvgAssetLoader('assets/objects/$id.svg'),
+          null,
+        );
+      } catch (_) {
+        // Unsupported pack entries retain their original prepared path.
+      }
+    }
+  }
+
   static Set<String> get availableIds => Set.unmodifiable(_paths.keys);
   static final Map<String, Path> _paths = {
     'umbrella': Path()
@@ -542,6 +561,19 @@ class ContextAssetStore {
         ? energy.clamp(0, 1) * .035
         : 0.0;
     canvas.scale(radius * (1 + pulse));
+    final emoji = _emoji[id];
+    if (emoji != null) {
+      canvas.saveLayer(
+        const Rect.fromLTWH(-1.1, -1.1, 2.2, 2.2),
+        Paint()..color = Colors.white.withValues(alpha: opacity.clamp(0, 1)),
+      );
+      canvas.scale(2 / emoji.size.width, 2 / emoji.size.height);
+      canvas.translate(-emoji.size.width / 2, -emoji.size.height / 2);
+      canvas.drawPicture(emoji.picture);
+      canvas.restore();
+      canvas.restore();
+      return;
+    }
     // A dimensional silhouette has a dark red offset face and a clear contour.
     canvas.drawPath(
       asset.shift(const Offset(.06, .08)),

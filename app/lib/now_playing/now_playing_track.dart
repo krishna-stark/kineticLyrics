@@ -32,6 +32,7 @@ class NowPlayingTrack {
     required this.playbackSpeed,
     required this.state,
     required this.receivedAt,
+    this.playbackActions = 0,
   });
 
   factory NowPlayingTrack.fromMap(Map<Object?, Object?> map) {
@@ -56,6 +57,7 @@ class NowPlayingTrack {
         orElse: () => PlaybackStatus.none,
       ),
       receivedAt: DateTime.now(),
+      playbackActions: map['playbackActions'] as int? ?? 0,
     );
   }
 
@@ -69,6 +71,12 @@ class NowPlayingTrack {
   final double playbackSpeed;
   final PlaybackStatus state;
   final DateTime receivedAt;
+  final int playbackActions;
+  bool get canSeek => playbackActions & 256 != 0;
+  bool get canNext => playbackActions & 32 != 0;
+  bool get canPrevious => playbackActions & 16 != 0;
+  bool get canToggle =>
+      playbackActions & (state == PlaybackStatus.playing ? 514 : 516) != 0;
 
   bool get isAdvancing => state == PlaybackStatus.playing && playbackSpeed != 0;
 
@@ -96,7 +104,8 @@ class NowPlayingTrack {
       other.duration == duration &&
       other.position == position &&
       other.playbackSpeed == playbackSpeed &&
-      other.state == state;
+      other.state == state &&
+      other.playbackActions == playbackActions;
 
   @override
   int get hashCode => Object.hash(
@@ -108,5 +117,6 @@ class NowPlayingTrack {
     position,
     playbackSpeed,
     state,
+    playbackActions,
   );
 }

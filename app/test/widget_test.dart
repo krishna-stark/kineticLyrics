@@ -106,7 +106,8 @@ void main() {
       tester.widget<MusicSurface>(find.byType(MusicSurface)).visualizerOpacity,
       closeTo(.12, .001),
     );
-    await tester.pump(const Duration(seconds: 8));
+    await tester.tap(find.byTooltip('Close controls'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(
       tester.widget<MusicSurface>(find.byType(MusicSurface)).visualizerOpacity,

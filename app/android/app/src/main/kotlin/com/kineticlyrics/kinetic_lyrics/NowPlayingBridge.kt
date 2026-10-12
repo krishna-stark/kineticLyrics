@@ -18,6 +18,7 @@ object NowPlayingBridge : EventChannel.StreamHandler {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var eventSink: EventChannel.EventSink? = null
     private var sessionListenerRegistered = false
+    private var selectedController: MediaController? = null
     private val callbacks = mutableMapOf<MediaController, MediaController.Callback>()
 
     private val activeSessionsListener =
@@ -70,6 +71,7 @@ object NowPlayingBridge : EventChannel.StreamHandler {
                 .filter { it.packageName != appContext.packageName }
             watch(controllers)
             val selected = controllers.maxByOrNull(::score)
+            selectedController = selected
             emit(
                 mapOf(
                     "access" to "granted",
@@ -97,6 +99,37 @@ object NowPlayingBridge : EventChannel.StreamHandler {
         }
     }
 
+    fun transport(action: String, source: String?, expectedTitle: String?, positionMs: Long?): Boolean {
+        val controller = selectedController ?: return false
+        if (controller.packageName != source || title(controller.metadata) != expectedTitle) return false
+        val actions = controller.playbackState?.actions ?: return false
+        val required = when (action) {
+            "play" -> PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PLAY_PAUSE
+            "pause" -> PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE
+            "next" -> PlaybackState.ACTION_SKIP_TO_NEXT
+            "previous" -> PlaybackState.ACTION_SKIP_TO_PREVIOUS
+            "seek" -> PlaybackState.ACTION_SEEK_TO
+            else -> return false
+        }
+        if ((actions and required) == 0L) return false
+        return try {
+            val controls = controller.transportControls
+            when (action) {
+                "play" -> controls.play()
+                "pause" -> controls.pause()
+                "next" -> controls.skipToNext()
+                "previous" -> controls.skipToPrevious()
+                "seek" -> {
+                    val duration = controller.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+                    if (duration <= 0 || positionMs == null) return false
+                    controls.seekTo(positionMs.coerceIn(0L, duration))
+                }
+            }
+            refresh()
+            true
+        } catch (_: Exception) { false }
+    }
+
     private fun watch(controllers: List<MediaController>) {
         val stale = callbacks.keys - controllers.toSet()
         stale.forEach { controller ->
@@ -115,6 +148,7 @@ object NowPlayingBridge : EventChannel.StreamHandler {
     }
 
     private fun stopWatching() {
+        selectedController = null
         callbacks.forEach { (controller, callback) ->
             controller.unregisterCallback(callback)
         }
@@ -157,6 +191,7 @@ object NowPlayingBridge : EventChannel.StreamHandler {
             "album" to metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM),
             "durationMs" to duration,
             "positionMs" to position,
+            "playbackActions" to (playback?.actions ?: 0L),
             "playbackSpeed" to (playback?.playbackSpeed?.toDouble() ?: 0.0),
             "state" to stateName(playback?.state),
         )

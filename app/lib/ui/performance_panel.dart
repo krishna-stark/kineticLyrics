@@ -10,9 +10,11 @@ class PerformancePanel extends StatelessWidget {
     super.key,
     required this.library,
     this.heightFraction = .82,
+    this.onClose,
   });
   final PerformanceLibrary library;
   final double heightFraction;
+  final VoidCallback? onClose;
 
   void _change(BuildContext context, PerformanceSettings settings) {
     unawaited(
@@ -64,7 +66,7 @@ class PerformancePanel extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: 'Close',
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: onClose ?? () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
                 ],

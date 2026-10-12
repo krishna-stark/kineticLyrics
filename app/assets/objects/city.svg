@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Generator: Adobe Illustrator 29.7.1, SVG Export Plug-In . SVG Version: 9.03 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [
+	<!ENTITY ns_extend "http://ns.adobe.com/Extensibility/1.0/">
+	<!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+	<!ENTITY ns_graphs "http://ns.adobe.com/Graphs/1.0/">
+	<!ENTITY ns_vars "http://ns.adobe.com/Variables/1.0/">
+	<!ENTITY ns_imrep "http://ns.adobe.com/ImageReplacement/1.0/">
+	<!ENTITY ns_sfw "http://ns.adobe.com/SaveForWeb/1.0/">
+	<!ENTITY ns_custom "http://ns.adobe.com/GenericCustomNamespace/1.0/">
+	<!ENTITY ns_adobe_xpath "http://ns.adobe.com/XPath/1.0/">
+]>
+<svg version="1.1"
+	 id="Layer_2_00000128460036334549559630000012285856786854555821_" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0" y="0" viewBox="0 0 128 128"
+	 enable-background="new 0 0 128 128" xml:space="preserve">
+
+	
+	<g i:extraneous="self">
+		<g>
+			
+				<radialGradient id="SVGID_1_" cx="72.0709381" cy="31.1665421" r="126.1912689" gradientTransform="matrix(1 0 0 -0.8004851 0 123.7818069)" gradientUnits="userSpaceOnUse">
+				<stop  offset="0.4028785" style="stop-color:#FAF6F3"/>
+				<stop  offset="0.5347882" style="stop-color:#FAF6F3"/>
+				<stop  offset="0.6877546" style="stop-color:#FAF6F3"/>
+				<stop  offset="0.8505805" style="stop-color:#D4CDCB"/>
+				<stop  offset="1" style="stop-color:#D4CDCB"/>
+			</radialGradient>
+			<path fill="url(#SVGID_1_)" d="M116.6200027,124.2600021H11.3199997c-4.1500001,0-7.52-3.3700027-7.52-7.5199966V11.4399996
+				c0-4.1500001,3.3699999-7.52,7.52-7.52h105.3000031c4.1500015,0,7.5199966,3.3699999,7.5199966,7.52v105.3000031
+				C124.1500015,120.8899994,120.7799988,124.2600021,116.6200027,124.2600021z"/>
+			<g>
+				<defs>
+					<path id="SVGID_00000041282602696699251150000001817259042283667341_" d="M116.6200027,124.2600021H11.3199997
+						c-4.1500001,0-7.52-3.3700027-7.52-7.5199966V11.4399996c0-4.1500001,3.3699999-7.52,7.52-7.52h105.3000031
+						c4.1500015,0,7.5199966,3.3699999,7.5199966,7.52v105.3000031
+						C124.1500015,120.8899994,120.7799988,124.2600021,116.6200027,124.2600021z"/>
+				</defs>
+				<clipPath id="SVGID_00000089567506063954806100000008697760557382208414_">
+					<use xlink:href="#SVGID_00000041282602696699251150000001817259042283667341_"  overflow="visible"/>
+				</clipPath>
+				<g clip-path="url(#SVGID_00000089567506063954806100000008697760557382208414_)">
+					<g>
+						<g>
+							
+								<linearGradient id="SVGID_00000169532136838095408070000010502370808260618398_" gradientUnits="userSpaceOnUse" x1="71.9909897" y1="25.4355106" x2="71.9909897" y2="120.2446365">
+								<stop  offset="0.0014111" style="stop-color:#D4CDCB"/>
+								<stop  offset="1" style="stop-color:#DB6262"/>
+							</linearGradient>
+							
+								<rect x="61.6309853" y="76.3348694" fill="url(#SVGID_00000169532136838095408070000010502370808260618398_)" width="20.7200089" height="54.1698418"/>
+							<g>
+								
+									<linearGradient id="SVGID_00000029013638034277502040000010472674765150253735_" gradientUnits="userSpaceOnUse" x1="43.4327354" y1="25.4355106" x2="43.4327354" y2="120.2446365">
+									<stop  offset="0.0014111" style="stop-color:#DB6262"/>
+									<stop  offset="1" style="stop-color:#DB6262"/>
+								</linearGradient>
+								
+									<rect x="27.7272263" y="18.8852596" fill="url(#SVGID_00000029013638034277502040000010472674765150253735_)" width="31.4110165" height="110.8354187"/>
+								<g>
+									<rect x="31.7848816" y="24.5717278" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+									<rect x="36.9734726" y="24.5717278" fill="#FAF6F3" width="2.5413418" height="7.5374522"/>
+									<rect x="42.1620636" y="24.5717278" fill="#FAF6F3" width="2.5413418" height="7.5374522"/>
+									<rect x="47.3506546" y="24.5717278" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+									<rect x="52.5392456" y="24.5717278" fill="#FAF6F3" width="2.5413418" height="7.5374522"/>
+								</g>
+								<g>
+									<rect x="31.7848816" y="36.6271095" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+									<rect x="36.9734726" y="36.6271095" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+									<rect x="42.1620636" y="36.6271095" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+								</g>
+								<g>
+									<rect x="31.7848816" y="48.6824951" fill="#FAF6F3" width="2.5413418" height="7.5374522"/>
+									<rect x="36.9734726" y="48.6824951" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+									<rect x="42.1620636" y="48.6824951" fill="#D4CDCB" width="2.5413418" height="7.5374522"/>
+								</g>
+							</g>
+							<g>
+								
+									<linearGradient id="SVGID_00000176030709377282223660000011147594701749165493_" gradientUnits="userSpaceOnUse" x1="13.9545584" y1="25.4355106" x2="13.9545584" y2="120.2446365">
+									<stop  offset="0.0014111" style="stop-color:#DB6262"/>
+									<stop  offset="1" style="stop-color:#DB6262"/>
+								</linearGradient>
+								
+									<rect x="6.4480228" y="47.3733444" fill="url(#SVGID_00000176030709377282223660000011147594701749165493_)" width="15.0130701" height="69.8466568"/>
+								<polygon fill="#B16B6B" points="21.4610939,117.2200012 24.079525,117.2200012 24.079525,50.0446854 21.4610939,47.3733444 
+																	"/>
+								<g>
+									<g>
+										<rect x="8.5202866" y="50.6772919" fill="#B16B6B" width="1.4571083" height="3.1115122"/>
+										<rect x="11.6948824" y="50.6772919" fill="#B16B6B" width="1.4571083" height="3.1115122"/>
+										<rect x="14.8694773" y="50.6772919" fill="#B16B6B" width="1.4571083" height="3.1115122"/>
+										<rect x="18.0440731" y="50.6772919" fill="#FAF6F3" width="1.4571083" height="3.1115122"/>
+									</g>
+									<g>
+										<rect x="8.5202866" y="56.2199478" fill="#FAF6F3" width="1.4571083" height="3.1115122"/>
+										<rect x="11.6948824" y="56.2199478" fill="#FAF6F3" width="1.4571083" height="3.1115122"/>
+										<rect x="14.8694773" y="56.2199478" fill="#B16B6B" width="1.4571083" height="3.1115122"/>
+										<rect x="18.0440731" y="56.2199478" fill="#FAF6F3" width="1.4571083" height="3.1115122"/>
+									</g>
+								</g>
+							</g>
+							<g>
+								
+									<linearGradient id="SVGID_00000032613971146058704010000005462785979290313126_" gradientUnits="userSpaceOnUse" x1="102.1144562" y1="25.4355106" x2="102.1144562" y2="120.2446365">
+									<stop  offset="0.0014111" style="stop-color:#DB6262"/>
+									<stop  offset="1" style="stop-color:#DB6262"/>
+								</linearGradient>
+								
+									<rect x="86.7334137" y="60.6893349" fill="url(#SVGID_00000032613971146058704010000005462785979290313126_)" width="30.762085" height="72.3806076"/>
+								<rect x="103.6692657" y="64.9606628" fill="#D4CDCB" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="72.6836395" fill="#FAF6F3" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="80.4066162" fill="#D4CDCB" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="88.1295853" fill="#D4CDCB" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="95.852562" fill="#FAF6F3" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="103.575531" fill="#D4CDCB" width="3.2692564" height="4.6046524"/>
+								<rect x="103.6692657" y="111.2985077" fill="#FAF6F3" width="3.2692564" height="4.6046524"/>
+							</g>
+						</g>
+						<g>
+							<g>
+								<rect x="46.1087494" y="29.7934647" fill="#B16B6B" width="18.7825031" height="94.4665375"/>
+								<g>
+									<g>
+										<rect x="49.3690186" y="34.4362259" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="34.4362259" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="34.4362259" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="115.9031601" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="115.9031601" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="115.9031601" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="42.5829201" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="42.5829201" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="42.5829201" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="50.7296143" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="50.7296143" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="50.7296143" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="58.8763084" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="58.8763084" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="58.8763084" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="67.0230026" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="67.0230026" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="67.0230026" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="75.169693" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="75.169693" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="75.169693" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="83.3163834" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="83.3163834" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="83.3163834" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="91.4630814" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="91.4630814" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="91.4630814" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="99.6097717" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="99.6097717" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="99.6097717" fill="#FAF6F3" width="2.5413418" height="4.7904258"/>
+									</g>
+									<g>
+										<rect x="49.3690186" y="107.7564697" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="54.229332" y="107.7564697" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+										<rect x="59.0896416" y="107.7564697" fill="#DB6262" width="2.5413418" height="4.7904258"/>
+									</g>
+								</g>
+							</g>
+							<g>
+								<rect x="37.0698776" y="60.3973274" fill="#B16B6B" width="5.5051637" height="63.8626671"/>
+								<rect x="3.8888404" y="60.3973274" fill="#B16B6B" width="35.1445045" height="63.8626671"/>
+								<g>
+									<rect x="6.4770017" y="66.1185303" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="14.2566214" y="66.1185303" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+									<rect x="22.0362396" y="66.1185303" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="29.8158588" y="66.1185303" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+								</g>
+								<g>
+									<rect x="6.4770017" y="78.0254974" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+									<rect x="14.2566214" y="78.0254974" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="22.0362396" y="78.0254974" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="29.8158588" y="78.0254974" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+								</g>
+								<g>
+									<rect x="6.4770017" y="89.9324722" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="14.2566214" y="89.9324722" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="22.0362396" y="89.9324722" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="29.8158588" y="89.9324722" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+								</g>
+								<g>
+									<rect x="6.4770017" y="101.839447" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="14.2566214" y="101.839447" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+									<rect x="22.0362396" y="101.839447" fill="#FAF6F3" width="4.0865703" height="6.9471698"/>
+									<rect x="29.8158588" y="101.839447" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+								</g>
+								<g>
+									<rect x="6.4770017" y="113.7464142" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="14.2566214" y="113.7464142" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="22.0362396" y="113.7464142" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+									<rect x="29.8158588" y="113.7464142" fill="#DB6262" width="4.0865703" height="6.9471698"/>
+								</g>
+							</g>
+							<g>
+								<rect x="69.8072281" y="51.8793831" fill="#B16B6B" width="30.762085" height="72.3806076"/>
+								<g>
+									<rect x="75.6149597" y="58.0865974" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="58.0865974" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="58.0865974" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="75.6149597" y="69.5653152" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="69.5653152" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="69.5653152" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="75.6149597" y="81.0440445" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="81.0440445" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="81.0440445" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="75.6149597" y="92.5227661" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="92.5227661" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="92.5227661" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="75.6149597" y="104.0014877" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="104.0014877" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="104.0014877" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="75.6149597" y="115.4802094" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="83.6169434" y="115.4802094" fill="#DB6262" width="3.1426551" height="4.6214657"/>
+									<rect x="91.6189194" y="115.4802094" fill="#FAF6F3" width="3.1426551" height="4.6214657"/>
+								</g>
+							</g>
+							<rect x="115.4522095" y="33.8346214" fill="#B16B6B" width="14.3029966" height="96.1252136"/>
+							<polygon fill="#B16B6B" points="115.4522095,129.9598389 109.5947952,126.3273315 109.5947952,38.3298492 
+								115.4522095,33.8346214 							"/>
+						</g>
+					</g>
+				</g>
+			</g>
+		</g>
+	</g>
+
+
+</svg>

@@ -308,3 +308,19 @@ Object grounding now follows cue order, favors longer overlapping literal phrase
 Native glyphs use natural font metrics and proportional texture padding. Fade layers and directional reveal masks retain the same padded extents. A pixel comparison verifies top/bottom mark preservation in six Noto sans/serif fonts for Telugu, Tamil, and Devanagari, with a rendered review at build/review/native-glyph-padding.png.
 
 Validation: 101 active Flutter tests pass, static analysis is clean, and the normal release APK builds. Prepared object artwork was rendered at production opacity and reviewed; source removal was checked in the APK (ONNX remains, Sherpa does not). Device singing capture is no longer part of this product.
+
+### 1.0.8 — contextual emoji art, playback deck and ads
+
+Contextual objects now use locally bundled Noto Emoji SVG artwork, recolored for the black/white/red scene. The original path library remains a fallback. SVG pictures are prepared once outside painting; playback does not download artwork. Artwork attribution and Apache license are in `app/assets/objects/`.
+
+Tap the scene for the bottom playback deck: play/pause, previous/next and seek use the detected Android MediaSession and honor its supported actions. Swipe left for settings and saved moments; tap the page labels to navigate as well. The deck stays open until dismissed and fades the visualizer. Paused playback shows title, artist and album with a separated 320×50 advertisement slot.
+
+Ads currently use Google's **test IDs**. Five completed songs make a video interstitial eligible at the next foreground pause with controls closed. Skips, seeks, repeated metadata, startup and active playback do not trigger it; failed loads preserve eligibility. Completed-song cadence persists locally. Ad delivery/creative availability depends on AdMob. Production interstitial units do not guarantee video-only creatives; configure creative types in AdMob.
+
+For live monetization, supply your own Android AdMob app ID and banner/interstitial unit IDs. Production uses Google's UMP consent flow and exposes Ad privacy when required. Example normal release build:
+
+```sh
+ORG_GRADLE_PROJECT_ADMOB_APP_ID='YOUR_ANDROID_ADMOB_APP_ID' flutter build apk --release --target-platform android-arm64 --target lib/main.dart --dart-define=ADS_TEST_MODE=false --dart-define=ADMOB_BANNER_ID=YOUR_BANNER_UNIT_ID --dart-define=ADMOB_VIDEO_ID=YOUR_INTERSTITIAL_UNIT_ID
+```
+
+Keep test mode enabled for development and QA. Do not click live ads during testing. The SDK and network requests are outside the lyric rendering loop; unavailable ads leave the small slot empty and never block music controls.
