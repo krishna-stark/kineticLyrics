@@ -43,13 +43,16 @@ class VocalWordPose {
             0.0,
             (item.word.start - shot.start).inMilliseconds.toDouble(),
           )
-        : item.index * 26.0;
+        : item.index * (motion.fast ? 32.0 : 60.0);
     final anticipation = motion.precise
         ? motion.anticipationMs.toDouble()
         : 0.0;
     final entry = motion.precise
         ? anticipation
-        : math.min(motion.entranceMs.toDouble(), math.max(90, span * .4));
+        : math.min(
+            motion.fast ? 160.0 : math.max(260.0, motion.entranceMs.toDouble()),
+            math.max(90, span * .35),
+          );
     final progress = ((age - onset + anticipation) / entry).clamp(0.0, 1.0);
     if (age < onset - anticipation) return const VocalWordPose(0, 1, 0, 0, 0);
     // Decelerate into the hold; acceleration and fading occur after the final
@@ -98,7 +101,10 @@ class VocalWordPose {
         turn = direction * (incoming * .16 - exit * .10);
         scale = 1 - incoming * .10 - exit * .18;
     }
-    final opacity = eased * (1 - exit) * (1 - retired * .52);
+    // Separate visibility from travel: the word becomes legible while the
+    // entrance is still moving, rather than spending the motion invisibly.
+    final visible = (progress * 2.2).clamp(0.0, 1.0);
+    final opacity = visible * (1 - exit) * (1 - retired * .52);
     return VocalWordPose(
       opacity,
       1 + (scale - 1) * intensity - retired * .15 + held + pulse,

@@ -171,6 +171,17 @@ void main() {
         intensity: .8,
       );
       expect(pose.opacity, greaterThan(.95));
+      final entering = VocalWordPose.sample(
+        item: shot.words.first,
+        shot: shot,
+        scene: scene,
+        position: shot.start + const Duration(milliseconds: 80),
+        intensity: .8,
+      );
+      expect(entering.opacity, greaterThan(.5));
+      expect(entering.dy.abs() + entering.dx.abs(), greaterThan(1));
+      expect(shot.motion.precise, isFalse);
+
       expect(
         VocalWordPose.sample(
           item: upcoming,

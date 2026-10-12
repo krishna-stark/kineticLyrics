@@ -503,8 +503,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 16),
                                     child: TextButton.icon(
-                                      onPressed:
-                                          widget.controller.audioAvailable
+                                      onPressed: widget.controller.audioSignal
                                           ? null
                                           : _audioConsent,
                                       icon: Icon(
@@ -523,6 +522,29 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   ),
                               ],
                             ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (track?.isAdvancing == true &&
+                    !c.audioSignal &&
+                    !_controlsVisible &&
+                    !_menuOpen)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 16,
+                    child: SafeArea(
+                      top: false,
+                      child: Center(
+                        child: TextButton.icon(
+                          onPressed: _audioConsent,
+                          icon: const Icon(Icons.graphic_eq),
+                          label: Text(
+                            c.audioAvailable
+                                ? 'No audio signal · reconnect visualizer'
+                                : 'Enable audio reaction',
                           ),
                         ),
                       ),

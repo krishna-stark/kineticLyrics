@@ -59,7 +59,32 @@ void main() {
     await tester.tapAt(const Offset(180, 400));
     await tester.pump();
     expect(find.text('Tap anywhere to hide controls'), findsOneWidget);
+    controller.audioAvailable = true;
+    controller.audioSignal = false;
+    detector.add(
+      NowPlayingSnapshot(
+        access: NowPlayingAccess.granted,
+        track: TestDetector.track(),
+      ),
+    );
+    await tester.pump();
+    final recovery = find.ancestor(
+      of: find.text('No audio signal · check volume'),
+      matching: find.byType(TextButton),
+    );
+    expect(tester.widget<TextButton>(recovery).onPressed, isNotNull);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      tester.widget<MusicSurface>(find.byType(MusicSurface)).visualizerOpacity,
+      closeTo(.12, .001),
+    );
     await tester.pump(const Duration(seconds: 8));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      tester.widget<MusicSurface>(find.byType(MusicSurface)).visualizerOpacity,
+      1,
+    );
+
     expect(find.text('Tap anywhere to hide controls'), findsNothing);
     expect(tester.getSize(find.byType(MusicSurface)), const Size(360, 780));
     expect(tester.takeException(), isNull);

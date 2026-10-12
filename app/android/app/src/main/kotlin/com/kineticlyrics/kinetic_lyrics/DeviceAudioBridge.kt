@@ -26,6 +26,11 @@ object DeviceAudioBridge : EventChannel.StreamHandler {
         stop()
     }
 
+    fun restart() {
+        stop()
+        startIfPermitted()
+    }
+
     fun startIfPermitted() {
         if (sink == null || visualizer != null) return
         try {

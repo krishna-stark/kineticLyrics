@@ -177,7 +177,7 @@ class MainActivity : FlutterActivity() {
                     if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
                     ) {
-                        DeviceAudioBridge.startIfPermitted()
+                        DeviceAudioBridge.restart()
                     } else {
                         requestPermissions(
                             arrayOf(Manifest.permission.RECORD_AUDIO),
