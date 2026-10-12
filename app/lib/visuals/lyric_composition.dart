@@ -15,6 +15,20 @@ enum CompositionFamily {
   intimate,
 }
 
+enum LyricTravel {
+  leftToRight,
+  rightToLeft,
+  topToBottom,
+  bottomToTop;
+
+  Offset get vector => switch (this) {
+    leftToRight => const Offset(1, 0),
+    rightToLeft => const Offset(-1, 0),
+    topToBottom => const Offset(0, 1),
+    bottomToTop => const Offset(0, -1),
+  };
+}
+
 /// Complete words are shaped once, in prepared shots, rather than paragraphs.
 class ComposedWord {
   ComposedWord(this.word, this.painter, this.origin, this.hero, this.index);
@@ -76,12 +90,20 @@ class ComposedWord {
 }
 
 class LyricShot {
-  LyricShot(this.start, this.end, this.words, this.family, this.transition);
+  LyricShot(
+    this.start,
+    this.end,
+    this.words,
+    this.family,
+    this.transition, {
+    this.travel = LyricTravel.bottomToTop,
+  });
   final Duration start;
   final Duration end;
   final List<ComposedWord> words;
   final CompositionFamily family;
   final SemanticTransition transition;
+  final LyricTravel travel;
   late final motion = LyricMotionPlan(this);
 }
 
@@ -513,6 +535,8 @@ class LyricComposition {
                   CompositionFamily.monument ||
                   CompositionFamily.spotlight => SemanticTransition.impact,
                 },
+          travel: LyricTravel
+              .values[(scene.index + shots.length) % LyricTravel.values.length],
         ),
       );
     }

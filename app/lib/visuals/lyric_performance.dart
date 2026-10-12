@@ -74,30 +74,34 @@ class VocalWordPose {
         ? math.sin(math.pi * item.word.progressAt(position)) * .025 * intensity
         : 0.0;
     final pulse = active ? (bassHit * .018 + midHit * .010) * intensity : 0.0;
-    final side = scene.block.isEven ? -1.0 : 1.0;
+    final travel = shot.travel.vector;
     final weight = item.hero ? 1.0 : .65;
     double dx = 0, dy = 0, turn = 0, scale = 1;
     switch (motion.transition) {
       case SemanticTransition.lift:
-        dy = incoming * 24 - exit * 22;
+        dx = travel.dx * (-incoming * 44 + exit * 32);
+        dy = travel.dy * (-incoming * 44 + exit * 32);
         scale = 1 - incoming * .055 - exit * .06;
       case SemanticTransition.dissolve:
-        dx = side * incoming * 8;
-        dy = incoming * 10 - exit * 12;
+        dx = travel.dx * (-incoming * 14 + exit * 16);
+        dy = travel.dy * (-incoming * 14 + exit * 16);
         scale = 1 - incoming * .025 - exit * .04;
       case SemanticTransition.slide:
-        dx = side * (incoming * 28 - exit * 24);
-        dy = -exit * 18;
+        dx = travel.dx * (-incoming * 56 + exit * 40);
+        dy = travel.dy * (-incoming * 56 + exit * 40);
         scale = 1 - incoming * .04 - exit * .16;
       case SemanticTransition.impact:
         // A single bounded overshoot with a settled, readable hold.
         final overshoot = math.sin(math.pi * progress) * .045 * weight;
         scale = 1 - incoming * .18 * weight + overshoot - exit * .12;
-        dy = incoming * 12 - exit * 20;
+        dx = travel.dx * (-incoming * 24 + exit * 28);
+        dy = travel.dy * (-incoming * 24 + exit * 28);
       case SemanticTransition.scatter:
         final direction = item.index.isEven ? -1.0 : 1.0;
-        dx = direction * (incoming * 20 + exit * 22);
-        dy = incoming * 20 - exit * (14 + item.index * 3);
+        final along = -incoming * 36 + exit * (26 + item.index * 3);
+        final across = direction * (incoming * 10 + exit * 12);
+        dx = travel.dx * along - travel.dy * across;
+        dy = travel.dy * along + travel.dx * across;
         turn = direction * (incoming * .16 - exit * .10);
         scale = 1 - incoming * .10 - exit * .18;
     }
@@ -108,8 +112,8 @@ class VocalWordPose {
     return VocalWordPose(
       opacity,
       1 + (scale - 1) * intensity - retired * .15 + held + pulse,
-      dx * intensity,
-      dy * intensity - retired * 10,
+      dx * intensity + travel.dx * retired * 10,
+      dy * intensity + travel.dy * retired * 10,
       turn * intensity,
       motion.transition == SemanticTransition.lift ? eased : 1,
     );
@@ -188,22 +192,25 @@ class LyricPerformance {
             : role == VocalRole.backing || echo
             ? .66
             : 1.0);
+    final travel = shot.travel.vector;
     final center = Offset(
       size.width *
-          (.5 +
-              (simultaneous
-                  ? side * .23
-                  : role == VocalRole.response
-                  ? .035
-                  : role == VocalRole.lead
-                  ? 0
-                  : -.035)),
+              (.5 +
+                  (simultaneous
+                      ? side * .23
+                      : role == VocalRole.response
+                      ? .035
+                      : role == VocalRole.lead
+                      ? 0
+                      : -.035)) +
+          travel.dx * size.width * .18 * retreat,
       size.height *
-          (echo
-              ? .14
-              : role == VocalRole.backing
-              ? .22
-              : 1 / 3 - retreat * .14),
+              (echo
+                  ? .14
+                  : role == VocalRole.backing
+                  ? .22
+                  : 1 / 3) +
+          travel.dy * size.height * .14 * retreat,
     );
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -230,14 +237,34 @@ class LyricPerformance {
       canvas.transform(transform.storage);
       canvas.translate(-rect.center.dx, -rect.center.dy);
       if (pose.reveal < 1) {
-        canvas.clipRect(
-          Rect.fromLTRB(
-            rect.left - 3,
-            rect.bottom - (rect.height + 6) * pose.reveal,
-            rect.right + 3,
-            rect.bottom + 3,
+        final padded = rect.inflate(3);
+        final reveal = switch (shot.travel) {
+          LyricTravel.leftToRight => Rect.fromLTWH(
+            padded.left,
+            padded.top,
+            padded.width * pose.reveal,
+            padded.height,
           ),
-        );
+          LyricTravel.rightToLeft => Rect.fromLTWH(
+            padded.right - padded.width * pose.reveal,
+            padded.top,
+            padded.width * pose.reveal,
+            padded.height,
+          ),
+          LyricTravel.topToBottom => Rect.fromLTWH(
+            padded.left,
+            padded.top,
+            padded.width,
+            padded.height * pose.reveal,
+          ),
+          LyricTravel.bottomToTop => Rect.fromLTWH(
+            padded.left,
+            padded.bottom - padded.height * pose.reveal,
+            padded.width,
+            padded.height * pose.reveal,
+          ),
+        };
+        canvas.clipRect(reveal);
       }
       item.paint(
         canvas,

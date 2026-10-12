@@ -267,3 +267,9 @@ Validation: all 93 tests pass, static analysis is clean, and the normal player r
 ### Visible phrase variation 1.0.3 (build 4)
 
 The main font now changes every four prepared verse lines even when the song has a uniform mood. Repeated refrains keep their identity. Quiet Latin phrases include clearly contrasting sans, cursive, serif and condensed faces; native scripts vary serif/sans at the same boundaries. Cursive dominant words retain their original case, and tracking preserves their natural joins. Duplicate font registrations in the manifest are removed. All 94 regression tests pass; `tool/font_variation_review_test.dart` renders successive phrase variants with the production renderer.
+
+### Directional motion 1.0.4 (build 5)
+
+Prepared lyric shots rotate through left-to-right, right-to-left, top-to-bottom and bottom-to-top travel. Direction is independent of transition style: entrances, masked reveals, outgoing handoffs and completed-word trails follow the prepared axis rather than all moving upward. Hold positions and timing provenance stay intact, and reduced motion remains stationary. Direction is deterministic for seeking and replay, with no per-frame selection or layout work.
+
+Validation: 95 tests pass and static analysis is clean. `tool/directional_motion_review_test.dart` uses the production renderer to capture four simultaneous direction sequences, including readable holds and outgoing handoffs.

@@ -108,6 +108,53 @@ void main() {
     }
   });
   test(
+    'directional entrances settle then depart along their prepared axis',
+    () {
+      final line = timeline(['Feel the rhythm']).enrich().lines.first;
+      final selected = <LyricTravel>{};
+      for (var i = 0; i < 4; i++) {
+        final scene = LyricScene(line, i, LyricMood.quiet, 0);
+        final composition = LyricComposition.prepare(
+          scene,
+          const Size(280, 320),
+          TextDirection.ltr,
+        );
+        final shot = composition.shots.first;
+        selected.add(shot.travel);
+        final vector = shot.travel.vector;
+        VocalWordPose sample(Duration position, {bool reduced = false}) =>
+            VocalWordPose.sample(
+              item: shot.words.first,
+              shot: shot,
+              scene: scene,
+              position: position,
+              intensity: 1,
+              reduced: reduced,
+            );
+        final entering = sample(shot.start + const Duration(milliseconds: 70));
+        final held = sample(shot.start + const Duration(milliseconds: 700));
+        final leaving = sample(shot.end + const Duration(milliseconds: 100));
+        expect(entering.dx * vector.dx + entering.dy * vector.dy, lessThan(0));
+        expect(leaving.dx * vector.dx + leaving.dy * vector.dy, greaterThan(0));
+        expect(held.dx, closeTo(0, .001));
+        expect(held.dy, closeTo(0, .001));
+        expect(held.opacity, 1);
+        final stable = sample(
+          shot.start + const Duration(milliseconds: 70),
+          reduced: true,
+        );
+        expect(stable.dx, 0);
+        expect(stable.dy, 0);
+        expect(
+          sample(shot.start + const Duration(milliseconds: 70)).dx,
+          entering.dx,
+        );
+        composition.dispose();
+      }
+      expect(selected, LyricTravel.values.toSet());
+    },
+  );
+  test(
     'literal native object changes promptly and unsupported context expires',
     () {
       final score = SongScore.prepare(
