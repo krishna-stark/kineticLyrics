@@ -13,6 +13,34 @@ import 'package:kinetic_lyrics/now_playing/now_playing_track.dart';
 import 'package:kinetic_lyrics/visuals/music_surface.dart';
 
 void main() {
+  testWidgets('plain lyrics stay readable without invented synchronization', (
+    tester,
+  ) async {
+    _phoneViewport(tester);
+    final detector = TestDetector();
+    final controller = KineticLyricsController(
+      nowPlaying: detector,
+      lyrics: LyricsRepository(providers: [PlainLyrics()]),
+    );
+    await tester.pumpWidget(KineticLyricsApp(controller: controller));
+    detector.add(
+      NowPlayingSnapshot(
+        access: NowPlayingAccess.granted,
+        track: TestDetector.track(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Lyrics · not time-synced'), findsOneWidget);
+    expect(find.text('Words stay together'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 40));
+    expect(find.text('Words stay together'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    controller.dispose();
+    await detector.close();
+  });
+
   testWidgets('first launch gives a useful state instead of a blank shell', (
     tester,
   ) async {
@@ -213,6 +241,21 @@ class TestLyrics implements LyricsProvider {
   Future<LyricTimeline?> find(TrackIdentity track) async => const LyricTimeline(
     provider: 'fixture',
     quality: LyricsTimingQuality.lineSynced,
+    lines: [
+      LyricLine(
+        text: 'Words stay together',
+        start: Duration.zero,
+        end: Duration(seconds: 30),
+      ),
+    ],
+  );
+}
+
+class PlainLyrics extends TestLyrics {
+  @override
+  Future<LyricTimeline?> find(TrackIdentity track) async => const LyricTimeline(
+    provider: 'plain',
+    quality: LyricsTimingQuality.unsynced,
     lines: [
       LyricLine(
         text: 'Words stay together',

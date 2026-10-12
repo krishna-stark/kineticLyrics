@@ -50,6 +50,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     WhisperModelPack? models,
     Future<RecognitionWorker> Function(WhisperModelFiles)? workerFactory,
     DateTime Function()? now,
+    this.watchdogInterval = const Duration(seconds: 1),
   }) : _capture = capture ?? PlaybackPcmCapture(),
        _models = models ?? WhisperModelPack(),
        _workerFactory = workerFactory ?? OnDeviceRecognitionWorker.start,
@@ -59,6 +60,7 @@ class OnDeviceLyricsLearner implements LyricsLearner {
   // backing track. Two-second clips frequently returned an empty transcript.
   static const _windowSamples = 16000 * 6;
 
+  final Duration watchdogInterval;
   final GeneratedLyricsStore store;
   final PlaybackPcmCapture _capture;
   final WhisperModelPack _models;
@@ -76,14 +78,21 @@ class OnDeviceLyricsLearner implements LyricsLearner {
   DateTime? _requestedAt;
   bool _anchored = false;
   bool _acceptResults = false;
+  Timer? _captureWatchdog;
+  DateTime? _lastPcmAt;
+  DateTime? _lastSignalAt;
+  DateTime? _listeningAt;
+  DateTime? _recognitionStartedAt;
   var _generation = 0;
   Future<LyricTimeline?>? _finishing;
+  Future<void>? _captureFailure;
 
   @override
   Stream<LearningStatus> get statuses => _status.stream;
 
   @override
   Future<void> start(TrackIdentity track, Duration currentPosition) async {
+    await _captureFailure;
     if (_track?.cacheKey == track.cacheKey) return;
     await finish(stopCapture: true);
     if (_track != null) return;
@@ -114,13 +123,51 @@ class OnDeviceLyricsLearner implements LyricsLearner {
         return;
       }
       _worker = worker;
-      _audioSubscription = _capture.chunks.listen(_onPcm);
+      _audioSubscription = _capture.chunks.listen(
+        _onPcm,
+        onError: (Object error) => unawaited(
+          _failCapture('Audio capture stopped: ${error.toString()}'),
+        ),
+        onDone: () =>
+            unawaited(_failCapture('The audio stream stopped. Retry capture.')),
+      );
       _emit(const LearningStatus(LearningState.awaitingCapturePermission));
       await _capture.start(sourcePackage: track.sourcePackage);
       if (generation != _generation) {
         await _capture.stop();
         return;
       }
+      _listeningAt = _now();
+      _lastPcmAt = null;
+      _lastSignalAt = null;
+      _recognitionStartedAt = null;
+      _captureWatchdog = Timer.periodic(watchdogInterval, (_) {
+        final now = _now();
+        final sinceAudio = now.difference(_lastPcmAt ?? _listeningAt!);
+        final sinceSignal = now.difference(_lastSignalAt ?? _listeningAt!);
+        if (sinceAudio >= const Duration(seconds: 12)) {
+          unawaited(
+            _failCapture(
+              'No audio arrived after permission was granted. The player may block capture. Published lyrics remain available.',
+            ),
+          );
+        } else if (sinceSignal >= const Duration(seconds: 15)) {
+          unawaited(
+            _failCapture(
+              'Captured audio is silent. Check playback and volume; this player may block audio capture.',
+            ),
+          );
+        } else if (_sections.isEmpty &&
+            _recognitionStartedAt != null &&
+            now.difference(_recognitionStartedAt!) >=
+                const Duration(seconds: 45)) {
+          unawaited(
+            _failCapture(
+              'Audio arrived, but recognition produced no usable lyrics within 45 seconds. Local AI is unavailable for this song.',
+            ),
+          );
+        }
+      });
       _emit(
         const LearningStatus(
           LearningState.listening,
@@ -145,10 +192,32 @@ class OnDeviceLyricsLearner implements LyricsLearner {
     }
   }
 
+  Future<void> _failCapture(String message) => _captureFailure ??=
+      _stopFailedCapture(message).whenComplete(() => _captureFailure = null);
+
+  Future<void> _stopFailedCapture(String message) async {
+    if (!_acceptResults || _finishing != null) return;
+    _acceptResults = false;
+    _generation++;
+    _captureWatchdog?.cancel();
+    _captureWatchdog = null;
+    _emit(LearningStatus(LearningState.unavailable, message: message));
+    await _audioSubscription?.cancel();
+    _audioSubscription = null;
+    await _capture.stop();
+    await _worker?.dispose();
+    _worker = null;
+    _pending.clear();
+    _buffer.clear();
+    _track = null;
+  }
+
   void _onPcm(PcmChunk chunk) {
     if (chunk.sampleRate != 16000 || _worker == null || _finishing != null) {
       return;
     }
+    _lastPcmAt = _now();
+    if (TranscriptQuality.hasSignal(chunk.samples)) _lastSignalAt = _now();
     if (!_anchored) {
       // Anchor the FIRST captured audio, after model setup and user consent.
       final delay = _now().difference(_requestedAt!);
@@ -178,7 +247,23 @@ class OnDeviceLyricsLearner implements LyricsLearner {
         Duration(milliseconds: _submittedSamples * 1000 ~/ 16000);
     final duration = Duration(milliseconds: samples.length * 1000 ~/ 16000);
     _submittedSamples += samples.length;
-    if (!TranscriptQuality.hasSignal(samples)) return;
+    if (!TranscriptQuality.hasSignal(samples)) {
+      _emit(
+        const LearningStatus(
+          LearningState.listening,
+          message:
+              'Audio is arriving, but it is silent. Check playback and volume.',
+        ),
+      );
+      return;
+    }
+    _recognitionStartedAt ??= _now();
+    _emit(
+      const LearningStatus(
+        LearningState.listening,
+        message: 'Audio received · recognizing a lyric phrase…',
+      ),
+    );
     if (_pending.length >= 2) {
       _emit(
         const LearningStatus(
@@ -222,10 +307,9 @@ class OnDeviceLyricsLearner implements LyricsLearner {
         })
         .catchError((Object error) {
           if (!_acceptResults) return;
-          _emit(
-            LearningStatus(
-              LearningState.unavailable,
-              message: _friendlyLearningError(error, duringRecognition: true),
+          unawaited(
+            _failCapture(
+              _friendlyLearningError(error, duringRecognition: true),
             ),
           );
         });
@@ -242,6 +326,8 @@ class OnDeviceLyricsLearner implements LyricsLearner {
 
   Future<LyricTimeline?> _finish({required bool stopCapture}) async {
     _generation++;
+    _captureWatchdog?.cancel();
+    _captureWatchdog = null;
     _models.cancel();
     final track = _track;
     try {

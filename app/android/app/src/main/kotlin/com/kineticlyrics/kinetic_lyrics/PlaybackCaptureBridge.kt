@@ -139,9 +139,18 @@ object PlaybackCaptureBridge : EventChannel.StreamHandler {
 
     private fun readLoop(audioRecord: AudioRecord) {
         val samples = ShortArray(1600) // 100 ms chunks
-        while (running.get()) {
+        while (running.get() && recorder === audioRecord) {
             val count = audioRecord.read(samples, 0, samples.size, AudioRecord.READ_BLOCKING)
-            if (count <= 0) continue
+            if (count < 0) {
+                main.post {
+                    if (recorder === audioRecord) {
+                        stop()
+                        sink?.error("capture_read", "Audio input stopped (code $count)", null)
+                    }
+                }
+                return
+            }
+            if (count == 0) continue
             val bytes = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
             for (index in 0 until count) bytes.putShort(samples[index])
             val payload = mapOf(

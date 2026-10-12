@@ -19,6 +19,107 @@ const track = TrackIdentity(
 Future<void> settle() => Future<void>.delayed(Duration.zero);
 void main() {
   test(
+    'usable audio with stalled recognition fails within 45 seconds',
+    () async {
+      var now = DateTime(2026);
+      final capture = TestCapture();
+      final worker = TestWorker();
+      final learner = OnDeviceLyricsLearner(
+        store: TestStore(),
+        capture: capture,
+        models: TestModels(),
+        workerFactory: (_) async => worker,
+        now: () => now,
+        watchdogInterval: const Duration(milliseconds: 1),
+      );
+      final statuses = <LearningStatus>[];
+      final subscription = learner.statuses.listen(statuses.add);
+      await learner.start(track, Duration.zero);
+      for (var i = 0; i < 10; i++) {
+        now = now.add(const Duration(seconds: 5));
+        capture.emit();
+        await settle();
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(statuses.last.state, LearningState.unavailable);
+      expect(
+        statuses.last.message,
+        contains('recognition produced no usable lyrics'),
+      );
+      expect(worker.jobs, hasLength(2));
+      for (final job in worker.jobs) {
+        job.complete(
+          const RecognitionResult(
+            text: 'late stale result',
+            tokens: [],
+            timestamps: [],
+          ),
+        );
+      }
+      await settle();
+      expect(statuses.last.partialTimeline, isNull);
+      await learner.dispose();
+      await subscription.cancel();
+      await capture.events.close();
+    },
+  );
+
+  test('missing PCM fails within 12 seconds and allows retry', () async {
+    var now = DateTime(2026);
+    final capture = TestCapture();
+    final learner = OnDeviceLyricsLearner(
+      store: TestStore(),
+      capture: capture,
+      models: TestModels(),
+      workerFactory: (_) async => TestWorker(),
+      now: () => now,
+      watchdogInterval: const Duration(milliseconds: 1),
+    );
+    final statuses = <LearningStatus>[];
+    final subscription = learner.statuses.listen(statuses.add);
+    await learner.start(track, Duration.zero);
+    now = now.add(const Duration(seconds: 12));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(statuses.last.state, LearningState.unavailable);
+    expect(statuses.last.message, contains('No audio arrived'));
+    await learner.start(track, Duration.zero);
+    await settle();
+    expect(statuses.last.state, LearningState.listening);
+    await learner.dispose();
+    await subscription.cancel();
+    await capture.events.close();
+  });
+
+  test('silent PCM fails instead of waiting indefinitely', () async {
+    var now = DateTime(2026);
+    final capture = TestCapture();
+    final worker = TestWorker();
+    final learner = OnDeviceLyricsLearner(
+      store: TestStore(),
+      capture: capture,
+      models: TestModels(),
+      workerFactory: (_) async => worker,
+      now: () => now,
+      watchdogInterval: const Duration(milliseconds: 1),
+    );
+    final statuses = <LearningStatus>[];
+    final subscription = learner.statuses.listen(statuses.add);
+    await learner.start(track, Duration.zero);
+    for (var i = 0; i < 3; i++) {
+      now = now.add(const Duration(seconds: 5));
+      capture.emit(silent: true);
+      await settle();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    expect(statuses.last.state, LearningState.unavailable);
+    expect(statuses.last.message, contains('silent'));
+    expect(worker.jobs, isEmpty);
+    await learner.dispose();
+    await subscription.cancel();
+    await capture.events.close();
+  });
+
+  test(
     'capture anchors after consent and preserves silent audio gaps',
     () async {
       var now = DateTime(2026);
@@ -118,7 +219,7 @@ void main() {
 }
 
 class TestCapture extends PlaybackPcmCapture {
-  final events = StreamController<PcmChunk>();
+  final events = StreamController<PcmChunk>.broadcast();
   @override
   Stream<PcmChunk> get chunks => events.stream;
   void emit({bool silent = false}) => events.add(

@@ -187,7 +187,9 @@ class _MusicSurfaceState extends State<MusicSurface>
             wordsAt(position) ||
             wordsAt(position + const Duration(milliseconds: 700));
         _absence = imminent ? 0 : _absence + delta;
-        final target = _absence > .35 ? 1.0 : 0.0;
+        final reading =
+            widget.controller.timeline?.quality == LyricsTimingQuality.unsynced;
+        final target = !reading && _absence > .35 ? 1.0 : 0.0;
         _takeover +=
             (target - _takeover) *
             (1 - math.exp(-delta / (target == 0 ? .16 : .60)));
@@ -340,7 +342,11 @@ class _MusicSurfaceState extends State<MusicSurface>
       _lastTick = null;
       _ticker.start();
     }
-    final timeline = widget.controller.timeline;
+    final sourceTimeline = widget.controller.timeline;
+    // Plain text has no musical timing. Never animate guessed timestamps.
+    final timeline = sourceTimeline?.quality == LyricsTimingQuality.unsynced
+        ? null
+        : sourceTimeline;
     if (!identical(timeline, _timeline) ||
         _scoredLayout != widget.settings.vocalLayout) {
       _timeline = timeline;

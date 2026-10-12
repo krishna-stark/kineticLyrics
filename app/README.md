@@ -285,3 +285,12 @@ The AI fallback uses multilingual Whisper Base int8 (approximately 160 MB downlo
 Validation: 105 tests cover source precedence, recording mismatch, decorated-title recovery, actual token boundaries, invalid timestamps, native text, silence, setup/consent delay, bounded backlog, stale-track rejection and draft migration. Static analysis and the production release build pass. These regression tests do not measure singing word error rate; real-song accuracy and larger-model latency remain to be evaluated on the phone.
 
 References: [Whisper model limitations](https://github.com/openai/whisper/blob/main/model-card.md), [Base model files](https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/tree/main), [Sherpa timestamp implementation](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/csrc/offline-recognizer-whisper-impl.h), [Android playback capture](https://developer.android.com/media/platform/av-capture).
+
+
+### Capture diagnostics and unsynced reading 1.0.6 (build 7)
+
+After consent, local learning stops with a specific explanation if no PCM arrives for 12 seconds, PCM stays silent for 15 seconds, or audio arrives but no usable transcript appears within 45 seconds of the first recognition window. Silence and active recognition have separate progress messages. Capture stream errors terminate the attempt, late results are discarded, and retries await cleanup. These checks identify failure modes; they cannot override a player that disallows playback capture or guarantee transcription accuracy.
+
+Unsynced provider text is now a scrollable reading view in the upper lyric area. The renderer never performs guessed plain-text timestamps, and the visualizer stays below the reading area. Real line/word-synced results retain the animated stage. This removes false synchronization; automatic alignment of plain text to singing is not implemented.
+
+Validation: 109 Flutter tests pass, including no-input timeout/retry, silent-input timeout, stalled recognition with late-result rejection, and unsynced lyrics remaining readable after playback advances.

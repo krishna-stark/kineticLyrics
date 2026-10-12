@@ -213,7 +213,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Download an approximately 160 MB multilingual model once. Android will then ask to capture playback audio.\n\nRecognition happens locally. Captured audio is never uploaded. AI drafts are saved for the next playback. Singing and background music can produce incorrect words. Timing is approximate.\n\nYou can cancel at any time and retry later.',
+                  'Download an approximately 160 MB multilingual model once. Android will then ask to capture the music player’s playback audio. This requires separate consent from visualizer access; no screen images are recorded.\n\nRecognition happens locally. Captured audio is never uploaded. AI drafts are saved for the next playback. Singing and background music can produce incorrect words. Timing is approximate.\n\nYou can cancel at any time and retry later.',
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
@@ -301,6 +301,40 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                   ),
                 ),
+                if (track != null &&
+                    c.timeline?.quality == LyricsTimingQuality.unsynced)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + 72,
+                    left: 24,
+                    right: 24,
+                    height: MediaQuery.sizeOf(context).height * .48,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Lyrics · not time-synced',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            key: ValueKey(track.title + track.artist),
+                            child: Text(
+                              c.timeline!.lines
+                                  .map((line) => line.text)
+                                  .join('\n\n'),
+                              style: const TextStyle(
+                                fontFamily: 'SpaceGrotesk',
+                                fontSize: 25,
+                                height: 1.5,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (track == null)
                   Center(
                     child: SafeArea(
@@ -457,6 +491,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           LyricsLoadState.ready =>
                                             c.timeline?.provider == 'on-device'
                                                 ? 'AI draft · words and timing unverified'
+                                                : c.timeline?.quality ==
+                                                      LyricsTimingQuality
+                                                          .unsynced
+                                                ? 'Plain lyrics · scroll to read; synchronization unavailable'
                                                 : 'Tap anywhere to hide controls',
                                           LyricsLoadState.idle =>
                                             'Music detected',
