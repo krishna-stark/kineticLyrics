@@ -168,7 +168,7 @@ void main() {
         songObjects: ['musicNote'],
       );
       expect(score.objects[0], 'moon');
-      expect(score.objects[1], 'moon');
+      expect(score.objects[1], isNull);
       expect(score.objects[2], isNull);
       expect(score.objects[3], 'rose');
     },

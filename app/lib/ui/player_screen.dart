@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../app/kinetic_lyrics_controller.dart';
-import '../learning/on_device_lyrics_learner.dart';
 import '../now_playing/now_playing_snapshot.dart';
 import '../visuals/music_surface.dart';
 import '../visuals/song_score.dart';
@@ -120,8 +119,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final timeline = c.timeline;
     final track = c.snapshot.track;
     if (timeline == null || track == null) return;
-    final position =
-        c.learningPreviewPosition ?? track.positionAt(DateTime.now());
+    final position = track.positionAt(DateTime.now());
     final score = SongScore.prepare(
       timeline,
       identity: '${track.title}/${track.artist}',
@@ -193,48 +191,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  Future<void> _preflight() async {
-    final accepted = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.privacy_tip_outlined, size: 32),
-                const SizedBox(height: 16),
-                Text(
-                  'Create a local lyric draft',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Download an approximately 160 MB multilingual model once. Android will then ask to capture the music player’s playback audio. This requires separate consent from visualizer access; no screen images are recorded.\n\nRecognition happens locally. Captured audio is never uploaded. AI drafts are saved for the next playback. Singing and background music can produce incorrect words. Timing is approximate.\n\nYou can cancel at any time and retry later.',
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Download and continue'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Keep the instrumental experience'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    if (accepted == true && mounted) {
-      await _action(widget.controller.startLearningLyrics);
-    }
-  }
-
   Future<void> _audioConsent() async {
     final accepted = await showDialog<bool>(
       context: context,
@@ -265,13 +221,6 @@ class _PlayerScreenState extends State<PlayerScreen>
       final c = widget.controller;
       final snapshot = c.snapshot;
       final track = snapshot.track;
-      final learning = c.learningStatus;
-      final busy = const {
-        LearningState.preparingModel,
-        LearningState.awaitingCapturePermission,
-        LearningState.listening,
-        LearningState.finalizing,
-      }.contains(learning.state);
       return Scaffold(
         backgroundColor: Colors.black,
         body: Semantics(
@@ -406,10 +355,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                   ),
-                if (track != null &&
-                    (_controlsVisible ||
-                        busy ||
-                        learning.state == LearningState.unavailable))
+                if (track != null && _controlsVisible)
                   Positioned(
                     top: MediaQuery.sizeOf(context).height * .5,
                     left: 16,
@@ -427,55 +373,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (busy ||
-                                    learning.state == LearningState.unavailable)
-                                  Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (learning.state ==
-                                            LearningState.preparingModel) ...[
-                                          LinearProgressIndicator(
-                                            value: learning.progress > 0
-                                                ? learning.progress
-                                                : null,
-                                          ),
-                                          const SizedBox(height: 12),
-                                        ],
-                                        Text(switch (learning.state) {
-                                          LearningState.preparingModel =>
-                                            'Preparing local AI · ${(learning.progress * 100).round()}%',
-                                          LearningState
-                                              .awaitingCapturePermission =>
-                                            'Approve Android playback-audio capture to continue.',
-                                          LearningState.listening =>
-                                            learning.message ??
-                                                'Learning an unverified AI draft for replay…',
-                                          LearningState.finalizing =>
-                                            'Saving lyrics on this phone…',
-                                          _ =>
-                                            learning.message ??
-                                                'No clear lyrics were recognized. Play the song and retry.',
-                                        }, textAlign: TextAlign.center),
-                                        if (busy)
-                                          TextButton(
-                                            onPressed: () =>
-                                                _action(c.cancelLearningLyrics),
-                                            child: const Text('Cancel AI'),
-                                          ),
-                                        if (!busy)
-                                          TextButton(
-                                            onPressed: _preflight,
-                                            child: const Text('Retry local AI'),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                if (!busy &&
-                                    learning.state !=
-                                        LearningState.unavailable &&
-                                    _controlsVisible)
+                                if (_controlsVisible)
                                   Padding(
                                     padding: const EdgeInsets.all(24),
                                     child: Column(
@@ -489,11 +387,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           LyricsLoadState.error =>
                                             'Lyrics could not load. Check your connection and retry.',
                                           LyricsLoadState.ready =>
-                                            c.timeline?.provider == 'on-device'
-                                                ? 'AI draft · words and timing unverified'
-                                                : c.timeline?.quality ==
-                                                      LyricsTimingQuality
-                                                          .unsynced
+                                            c.timeline?.quality ==
+                                                    LyricsTimingQuality.unsynced
                                                 ? 'Plain lyrics · scroll to read; synchronization unavailable'
                                                 : 'Tap anywhere to hide controls',
                                           LyricsLoadState.idle =>
@@ -506,15 +401,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             onPressed: () =>
                                                 _action(c.retryLyrics),
                                             child: const Text('Retry lyrics'),
-                                          ),
-                                        if (c.lyricsState ==
-                                                LyricsLoadState.notFound &&
-                                            track.isAdvancing)
-                                          TextButton(
-                                            onPressed: _preflight,
-                                            child: const Text(
-                                              'Learn lyrics on device',
-                                            ),
                                           ),
                                       ],
                                     ),

@@ -9,10 +9,21 @@ import 'performance_settings.dart';
 /// A bounded, deterministic lyric score. Repeated sequences are refrain cues,
 /// not a claim of audio-based verse/chorus recognition.
 class SongScore {
-  SongScore._(this.timeline, this.scenes, this.objects);
+  SongScore._(this.timeline, this.scenes, this.objects, this.objectCues);
   final LyricTimeline timeline;
   final List<LyricScene> scenes;
   final Map<int, String?> objects;
+  final Map<int, List<LyricObjectCue>> objectCues;
+
+  String? objectAt(Duration position) {
+    final index = timeline.indexAt(position);
+    if (index < 0 || position >= timeline.lines[index].end) return null;
+    final cues = objectCues[index] ?? const [];
+    for (final cue in cues.reversed) {
+      if (position >= cue.start && position < cue.end) return cue.id;
+    }
+    return null;
+  }
 
   static SongScore prepare(
     LyricTimeline source, {
@@ -69,8 +80,7 @@ class SongScore {
     var block = -1;
     SongSection? last;
     final objects = <int, String?>{};
-    String? held;
-    Duration? heldSince;
+    final objectCues = <int, List<LyricObjectCue>>{};
     final scenes = <LyricScene>[];
     for (var i = 0; i < base.length; i++) {
       final scene = base[i];
@@ -130,31 +140,49 @@ class SongScore {
         ),
       );
 
-      final lexical = OnDeviceE5SemanticAnalyzer.lexicalObjectsFor(
+      final mentions = OnDeviceE5SemanticAnalyzer.lexicalMentionsFor(
         scene.line.text,
       );
-      final explicit = lexical.firstOrNull?.name;
-      final candidate = explicit ?? meaning?.objects.firstOrNull?.name;
       final available = ContextAssetStore.availableIds;
-      final next = available.contains(candidate) ? candidate : null;
-      // A literal new cue overrides immediately; ambiguous context does not
-      // keep a stale prop indefinitely. Hold a verified song motif at most 12 s.
-      if (next != null) {
-        if (next != held) heldSince = scene.line.start;
-        held = next;
-      } else if (heldSince == null ||
-          scene.line.start - heldSince > const Duration(seconds: 8)) {
-        held = songObjects
-            .where((id) => available.contains(id) && id != 'musicNote')
-            .firstOrNull;
-        heldSince = held == null ? null : scene.line.start;
+      final cues = <LyricObjectCue>[];
+      final tokens = RegExp(r'\S+').allMatches(scene.line.text).toList();
+      for (final mention in mentions) {
+        if (!available.contains(mention.kind.name)) continue;
+        final token = tokens.indexWhere((token) => token.end > mention.start);
+        final start = scene.line.words.length == tokens.length && token >= 0
+            ? scene.line.words[token].start
+            : scene.line.start;
+        if (cues.isNotEmpty &&
+            start - cues.last.start < const Duration(milliseconds: 650)) {
+          continue;
+        }
+        cues.add(LyricObjectCue(mention.kind.name, start, scene.line.end));
+        if (cues.length == 3) break;
       }
-      objects[i] = scene.hasLyrics ? held : null;
+      if (cues.isEmpty && scene.hasLyrics) {
+        // Ambiguous lines clear the old prop. Only current line evidence or a
+        // refrain's recurring motif can supply a replacement.
+        final candidate =
+            meaning?.objects.firstOrNull?.name ??
+            (repeats[i]
+                ? songObjects.where((id) => id != 'musicNote').firstOrNull
+                : null);
+        if (available.contains(candidate)) {
+          cues.add(
+            LyricObjectCue(candidate!, scene.line.start, scene.line.end),
+          );
+        }
+      }
+      objectCues[i] = List.unmodifiable(
+        scene.hasLyrics ? cues : <LyricObjectCue>[],
+      );
+      objects[i] = scene.hasLyrics ? cues.firstOrNull?.id : null;
     }
     return SongScore._(
       timeline,
       List.unmodifiable(scenes),
       Map.unmodifiable(objects),
+      Map.unmodifiable(objectCues),
     );
   }
 
@@ -167,4 +195,11 @@ class SongScore {
     }
     return math.max(0, result);
   }
+}
+
+class LyricObjectCue {
+  const LyricObjectCue(this.id, this.start, this.end);
+  final String id;
+  final Duration start;
+  final Duration end;
 }

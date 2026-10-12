@@ -2,7 +2,13 @@
 /// is compiled per anchor, line, script, or object kind.
 class LyricCues {
   static final _wordCharacter = RegExp(r'^[\p{L}\p{M}\p{N}_]$', unicode: true);
-  static bool contains(String text, List<String> anchors) {
+  static bool contains(String text, List<String> anchors) =>
+      matches(text, anchors).isNotEmpty;
+
+  static Iterable<({int start, int end, String anchor})> matches(
+    String text,
+    List<String> anchors,
+  ) sync* {
     for (final anchor in anchors) {
       if (anchor.isEmpty) continue;
       var index = text.indexOf(anchor);
@@ -26,11 +32,10 @@ class LyricCues {
         final after =
             end == text.length ||
             !_wordCharacter.hasMatch(text.substring(end, right));
-        if (before && after) return true;
+        if (before && after) yield (start: index, end: end, anchor: anchor);
         index = text.indexOf(anchor, index + 1);
       }
     }
-    return false;
   }
 
   static bool _low(int c) => c >= 0xdc00 && c <= 0xdfff;

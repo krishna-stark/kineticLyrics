@@ -56,7 +56,6 @@ class _MusicSurfaceState extends State<MusicSurface>
   LyricTimeline? _timeline;
   LyricTimeline? _sceneTimeline;
   SongSemanticProfile? _semantics;
-  Map<int, String?> _objects = {};
   double _takeover = 0;
   double _absence = 0;
   String? _currentObject;
@@ -154,9 +153,9 @@ class _MusicSurfaceState extends State<MusicSurface>
             : _takeover;
         _instrumentalMix +=
             (blendTarget - _instrumentalMix) * (1 - math.exp(-delta / .45));
-        final position =
-            widget.controller.learningPreviewPosition ??
-            widget.controller.snapshot.track!.positionAt(DateTime.now());
+        final position = widget.controller.snapshot.track!.positionAt(
+          DateTime.now(),
+        );
         if (widget.settings.haptics &&
             _foreground &&
             features.live &&
@@ -198,7 +197,7 @@ class _MusicSurfaceState extends State<MusicSurface>
             original >= 0 &&
             original < (_sceneTimeline?.lines.length ?? 0) &&
             position < _sceneTimeline!.lines[original].end;
-        final object = valid ? _objects[original] : null;
+        final object = valid ? _score?.objectAt(position) : null;
         if (object != _currentObject) {
           _previousObject = _currentObject;
           _currentObject = object;
@@ -228,7 +227,6 @@ class _MusicSurfaceState extends State<MusicSurface>
       _score = null;
       _sceneTimeline = null;
       _scenes = [];
-      _objects = {};
       return;
     }
     final track = widget.controller.snapshot.track;
@@ -241,7 +239,6 @@ class _MusicSurfaceState extends State<MusicSurface>
     );
     _sceneTimeline = _score!.timeline;
     _scenes = _score!.scenes;
-    _objects = _score!.objects;
     _scoredLayout = widget.settings.vocalLayout;
   }
 
@@ -250,7 +247,6 @@ class _MusicSurfaceState extends State<MusicSurface>
     _preparedBounds = bounds;
     final generation = _layoutGeneration;
     final position =
-        widget.controller.learningPreviewPosition ??
         widget.controller.snapshot.track?.positionAt(DateTime.now()) ??
         Duration.zero;
     final active = math.max(0, _sceneTimeline?.indexAt(position) ?? 0);
@@ -459,10 +455,7 @@ class _MusicSurfaceState extends State<MusicSurface>
                 math.min(size.height * .43, size.height * 2 / 3 - 128),
               ),
             );
-            final position =
-                widget.controller.learningPreviewPosition ??
-                track?.positionAt(DateTime.now()) ??
-                Duration.zero;
+            final position = track?.positionAt(DateTime.now()) ?? Duration.zero;
             final active = _sceneTimeline?.indexAt(position) ?? -1;
             if (active >= 0 && active < _scenes.length) {
               final scene = _scenes[active];
@@ -570,10 +563,7 @@ class _MusicPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.drawColor(Colors.black, BlendMode.src);
     final track = controller.snapshot.track;
-    final position =
-        controller.learningPreviewPosition ??
-        track?.positionAt(DateTime.now()) ??
-        Duration.zero;
+    final position = track?.positionAt(DateTime.now()) ?? Duration.zero;
     final index = timeline?.indexAt(position) ?? -1;
     final scene =
         index >= 0 &&
@@ -729,14 +719,42 @@ class _MusicPainter extends CustomPainter {
       if (id == null || opacity <= .001) return;
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height * 2 / 3));
-      final center = Offset(size.width * .72, size.height * .23);
-      final base = size.width * .22;
+      final left = {
+        'rose',
+        'flower',
+        'tree',
+        'bird',
+        'butterfly',
+        'heart',
+        'leaf',
+        'lotus',
+      }.contains(id);
+      final wide = {
+        'city',
+        'road',
+        'ocean',
+        'mountain',
+        'river',
+        'rain',
+      }.contains(id);
+      final center = Offset(
+        size.width *
+            (wide
+                ? .5
+                : left
+                ? .23
+                : .76),
+        size.height * (wide ? .46 : .24),
+      );
+      final base = size.width * (wide ? .38 : .22);
       ContextAssetStore.paint(
         canvas,
         id,
         center,
         base + audio.bass * 3,
-        opacity * (.20 + audio.mid * .025),
+        opacity * (.28 + audio.mid * .025),
+        time: reduced ? 0 : t,
+        energy: reduced ? 0 : audio.bass,
       );
       canvas.restore();
     }

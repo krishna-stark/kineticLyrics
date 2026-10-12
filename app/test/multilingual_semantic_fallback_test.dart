@@ -115,8 +115,8 @@ void main() {
     },
   );
 
-  test('all forty object names survive profile cache serialization', () {
-    expect(BackgroundObjectKind.values, hasLength(40));
+  test('all supported object names survive profile cache serialization', () {
+    expect(BackgroundObjectKind.values, hasLength(46));
     const profile = SongSemanticProfile(
       trackKey: 'test',
       aiGenerated: true,

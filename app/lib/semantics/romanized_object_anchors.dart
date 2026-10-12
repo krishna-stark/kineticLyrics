@@ -3,6 +3,17 @@ import 'song_semantic_profile.dart';
 /// Common Tamil/Telugu/Hindi lyric spellings, including frequent inflections.
 /// This is a bounded vocabulary, not a claim to translate every language.
 const romanizedObjectAnchors = <BackgroundObjectKind, List<String>>{
+  BackgroundObjectKind.umbrella: ['godugu', 'kudai', 'chhata', 'chata'],
+  BackgroundObjectKind.candle: ['deepam', 'vilakku', 'diya', 'mombatti'],
+  BackgroundObjectKind.feather: ['eeka', 'iragu', 'iragu pola'],
+  BackgroundObjectKind.desert: ['edari', 'paalaivanam', 'registan'],
+  BackgroundObjectKind.dancer: [
+    'natyam',
+    'nrityam',
+    'nadanam',
+    'naach',
+    'nach',
+  ],
   BackgroundObjectKind.heart: [
     'ప్రేమలో',
     'మనసు',

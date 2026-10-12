@@ -10,10 +10,8 @@ import '../audio/music_state.dart';
 import '../lyrics/data/lyrics_repository.dart';
 import '../lyrics/domain/lyric_timeline.dart';
 import '../lyrics/domain/track_identity.dart';
-import '../learning/on_device_lyrics_learner.dart';
 import '../now_playing/now_playing_detector.dart';
 import '../now_playing/now_playing_snapshot.dart';
-import '../now_playing/now_playing_track.dart';
 
 enum LyricsLoadState { idle, loading, ready, notFound, error }
 
@@ -24,33 +22,28 @@ class KineticLyricsController extends ChangeNotifier {
     required NowPlayingDetector nowPlaying,
     required LyricsRepository lyrics,
     AudioAnalyzer audio = const SilentAudioAnalyzer(),
-    LyricsLearner? learner,
     LyricSemanticAnalyzer? semanticAnalyzer,
-  }) : this._(nowPlaying, lyrics, audio, learner, semanticAnalyzer);
+  }) : this._(nowPlaying, lyrics, audio, semanticAnalyzer);
 
   KineticLyricsController._(
     this._nowPlaying,
     this._lyrics,
     this._audio,
-    this._learner,
     this._semanticAnalyzer,
   );
 
   final NowPlayingDetector _nowPlaying;
   final LyricsRepository _lyrics;
   final AudioAnalyzer _audio;
-  final LyricsLearner? _learner;
   final LyricSemanticAnalyzer? _semanticAnalyzer;
   SongSemanticProfile? _semanticProfile;
   SongSemanticProfile? get semanticProfile => _semanticProfile;
   SemanticAnalysisStatus semanticStatus = SemanticAnalysisStatus.idle;
   StreamSubscription<NowPlayingSnapshot>? _subscription;
   StreamSubscription<AudioFeatures>? _audioSubscription;
-  StreamSubscription<LearningStatus>? _learningSubscription;
   int _lookupGeneration = 0;
   String? _loadedTrackKey;
   bool _disposed = false;
-  bool _acceptLearning = true;
   final MusicStateTracker _musicTracker = MusicStateTracker();
 
   NowPlayingSnapshot snapshot = NowPlayingSnapshot.checking();
@@ -61,11 +54,6 @@ class KineticLyricsController extends ChangeNotifier {
   bool audioSignal = false;
   Duration? _lastAudioSignal;
   MusicState musicState = MusicState.silent;
-  LearningStatus learningStatus = const LearningStatus(LearningState.idle);
-
-  // Recognition results keep the song clock; never replay old words as live.
-  Duration? get learningPreviewPosition => null;
-
   void initialize() {
     _subscription ??= _nowPlaying.snapshots.listen(
       _onNowPlaying,
@@ -103,28 +91,6 @@ class KineticLyricsController extends ChangeNotifier {
         notifyListeners();
       }
     });
-    _learningSubscription ??= _learner?.statuses.listen((status) {
-      if (!_acceptLearning || _disposed) return;
-      if (status.trackKey != null &&
-          (snapshot.track == null ||
-              status.trackKey !=
-                  TrackIdentity.fromNowPlaying(snapshot.track!).cacheKey)) {
-        return;
-      }
-      learningStatus = status;
-      if (status.partialTimeline != null &&
-          (timeline == null ||
-              timeline!.quality == LyricsTimingQuality.estimated)) {
-        timeline = status.partialTimeline;
-        _semanticProfile = null;
-        semanticStatus = SemanticAnalysisStatus.idle;
-        lyricsState = LyricsLoadState.ready;
-      }
-      notifyListeners();
-      if (status.state == LearningState.learned) {
-        unawaited(retryLyrics());
-      }
-    });
   }
 
   Future<void> openAccessSettings() => _nowPlaying.openAccessSettings();
@@ -141,13 +107,9 @@ class KineticLyricsController extends ChangeNotifier {
   }
 
   void _onNowPlaying(NowPlayingSnapshot value) {
-    final previousTrack = snapshot.track;
     snapshot = value;
     final track = value.track;
     if (track == null) {
-      _acceptLearning = false;
-      learningStatus = const LearningStatus(LearningState.idle);
-      unawaited(_learner?.finish(stopCapture: true));
       _musicTracker.reset();
       musicState = MusicState.silent;
       audioFeatures = AudioFeatures.silent;
@@ -163,35 +125,12 @@ class KineticLyricsController extends ChangeNotifier {
 
     final identity = TrackIdentity.fromNowPlaying(track);
     final changed = identity.cacheKey != _loadedTrackKey;
-    final sought =
-        !changed &&
-        previousTrack != null &&
-        (track.state == PlaybackStatus.seeking ||
-            (track.position - previousTrack.positionAt(DateTime.now()))
-                    .inMilliseconds
-                    .abs() >
-                1500);
-    if (sought) {
-      if (learningStatus.state == LearningState.listening ||
-          learningStatus.state == LearningState.preparingModel ||
-          learningStatus.state == LearningState.awaitingCapturePermission) {
-        unawaited(cancelLearningLyrics());
-      }
-    }
     if (changed) {
-      if (_loadedTrackKey != null) _acceptLearning = false;
-      learningStatus = const LearningStatus(LearningState.idle);
-      unawaited(_learner?.finish(stopCapture: true));
       _musicTracker.reset();
       musicState = MusicState.silent;
       audioFeatures = AudioFeatures.silent;
     }
     if (!track.isAdvancing) {
-      if (learningStatus.state == LearningState.listening ||
-          learningStatus.state == LearningState.preparingModel ||
-          learningStatus.state == LearningState.awaitingCapturePermission) {
-        unawaited(cancelLearningLyrics());
-      }
       musicState = MusicState.silent;
       audioFeatures = AudioFeatures.silent;
     }
@@ -268,21 +207,6 @@ class KineticLyricsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startLearningLyrics() async {
-    final track = snapshot.track;
-    if (track == null || !track.isAdvancing || _learner == null) return;
-    final identity = TrackIdentity.fromNowPlaying(track);
-    _acceptLearning = true;
-    await _learner.start(identity, track.positionAt(DateTime.now()));
-  }
-
-  Future<void> cancelLearningLyrics() async {
-    _acceptLearning = false;
-    learningStatus = const LearningStatus(LearningState.idle);
-    notifyListeners();
-    await _learner?.finish(stopCapture: true);
-  }
-
   Future<void> enableAudioReaction() async {
     try {
       await _audio.requestAccess();
@@ -297,8 +221,6 @@ class KineticLyricsController extends ChangeNotifier {
     _lookupGeneration++;
     _subscription?.cancel();
     _audioSubscription?.cancel();
-    _learningSubscription?.cancel();
-    unawaited(_learner?.dispose());
     _semanticAnalyzer?.dispose();
     _audio.dispose();
     _nowPlaying.dispose();

@@ -39,6 +39,12 @@ enum BackgroundObjectKind {
   compass,
   hand,
   musicNote,
+  guitar,
+  umbrella,
+  candle,
+  feather,
+  desert,
+  dancer,
 }
 
 enum SemanticMotionPath {

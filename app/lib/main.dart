@@ -4,10 +4,9 @@ import 'package:flutter/services.dart';
 
 import 'app/kinetic_lyrics_controller.dart';
 import 'audio/audio_analyzer.dart';
-import 'learning/generated_lyrics_store.dart';
-import 'learning/on_device_lyrics_learner.dart';
 import 'lyrics/data/json_http_client.dart';
 import 'lyrics/data/lrclib_provider.dart';
+import 'lyrics/data/lyrics_ovh_provider.dart';
 import 'lyrics/data/lyrics_repository.dart';
 import 'now_playing/now_playing_detector.dart';
 import 'ui/player_screen.dart';
@@ -22,18 +21,16 @@ Future<void> main() async {
 
 class AppComposition {
   static KineticLyricsController createController() {
-    final generated = GeneratedLyricsStore();
     final lyrics = LyricsRepository(
       providers: [
         LrcLibProvider(client: DartJsonHttpClient()),
-        generated,
+        LyricsOvhProvider(client: DartJsonHttpClient()),
       ],
     );
     return KineticLyricsController(
       nowPlaying: NowPlayingDetector.forCurrentPlatform(),
       lyrics: lyrics,
       audio: PlatformAudioAnalyzer(),
-      learner: OnDeviceLyricsLearner(store: generated),
       semanticAnalyzer:
           !kIsWeb && defaultTargetPlatform == TargetPlatform.android
           ? OnDeviceE5SemanticAnalyzer()

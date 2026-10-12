@@ -44,16 +44,17 @@ Flutter Android app for a full-screen lyric experience, following
   Native-language objects appear immediately while AI direction is prepared. They are prepared artwork with
   perspective transforms, not generated pictures or textured 3D models.
 - Deliberate notification-access, no-music, loading, unavailable, error, paused,
-  and AI preparation/capture/listening/partial-lyrics states. Controls are quiet,
+  and background semantic analysis states. Controls are quiet,
   scroll at large system text sizes, and appear on tap.
-- Seeking and track changes invalidate stale lookups and AI previews. Paused
+- Seeking and track changes invalidate stale lookups and semantic results. Paused
   playback freezes the visual field. New tracks fade in through a single surface.
 - Android Remove Animations disables continuous motion. Functional UI follows
   system text size. Playback keeps the foreground display awake; pause or leaving
   the app releases that policy.
-- AI audio transcription requires an explicit privacy preflight, reports model progress, supports
-  cancellation during download and capture, stores lyrics locally, and gives
-  friendly retryable errors. Spectral audio permission also has an explanation.
+- Lyric lookup queries LRCLIB and lyrics.ovh concurrently with bounded waits.
+  Real synchronized results take priority; plain text uses a manual reading view.
+  On-device lyric transcription and playback capture have been removed.
+  Spectral visualizer audio permission retains its explanation.
 
 Visual references inspected: the official [Dhop](https://www.youtube.com/watch?v=09tCNsSRE3U),
 [KISSIK](https://www.youtube.com/watch?v=3C1n5lqGdmY),
@@ -294,3 +295,16 @@ After consent, local learning stops with a specific explanation if no PCM arrive
 Unsynced provider text is now a scrollable reading view in the upper lyric area. The renderer never performs guessed plain-text timestamps, and the visualizer stays below the reading area. Real line/word-synced results retain the animated stage. This removes false synchronization; automatic alignment of plain text to singing is not implemented.
 
 Validation: 109 Flutter tests pass, including no-input timeout/retry, silent-input timeout, stalled recognition with late-result rejection, and unsynced lyrics remaining readable after playback advances.
+
+
+### Published sources and contextual objects 1.0.7 (build 8)
+
+This version supersedes the historical transcription notes above: all lyric-learning Dart code, Android PCM bridge/service, MediaProjection permissions, Whisper downloads, and Sherpa speech dependencies are removed. Existing speech model downloads and generated drafts are retired in a background cleanup. The visualizer retains RECORD_AUDIO for Android's Visualizer API. ONNX is retained exclusively for text-based semantic direction, with the same previously bundled arm64 runtime now packaged independently of Sherpa.
+
+LRCLIB and lyrics.ovh are queried independently; a synchronized result returns immediately without waiting for a slow fallback. Providers are bounded to 12 seconds and misses are not pinned in cache. lyrics.ovh is a best-effort plain-text fallback with no guaranteed catalog coverage. A live Beat It check returned synchronized LRCLIB candidates and a lyrics.ovh 404; that fallback does not cover that lookup.
+
+Object grounding now follows cue order, favors longer overlapping literal phrases, suppresses directly negated English nouns, and clears unsupported props at line boundaries. Up to three cues can change objects at corresponding word onsets, with a 650 ms minimum separation. Native and romanized cues add guitar, umbrella, candle, feather, desert, and dancer, bringing the semantic library to 46 types. Landscape silhouettes have wider lower placement, smaller motifs vary sides, floating/natural props use restrained motion, and contours use a subtle white/red gradient. All paths are prepared, and no network or model work happens during painting. The limited lexical vocabulary does not imply universal language understanding.
+
+Native glyphs use natural font metrics and proportional texture padding. Fade layers and directional reveal masks retain the same padded extents. A pixel comparison verifies top/bottom mark preservation in six Noto sans/serif fonts for Telugu, Tamil, and Devanagari, with a rendered review at build/review/native-glyph-padding.png.
+
+Validation: 101 active Flutter tests pass, static analysis is clean, and the normal release APK builds. Prepared object artwork was rendered at production opacity and reviewed; source removal was checked in the APK (ONNX remains, Sherpa does not). Device singing capture is no longer part of this product.

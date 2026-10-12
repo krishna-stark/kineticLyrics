@@ -22,6 +22,13 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
+        // Retired speech-recognition downloads and drafts belong to this app.
+        // Keep deletion off the UI thread; semantic models and saved moments stay.
+        Thread({
+            for (relative in listOf("models/whisper-base-int8", "models/whisper-tiny-int8", "learned_lyrics")) {
+                runCatching { File(filesDir, relative).deleteRecursively() }
+            }
+        }, "retired-lyric-cache-cleanup").start()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
         } else {
@@ -142,29 +149,6 @@ class MainActivity : FlutterActivity() {
 
         EventChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "kinetic_lyrics/pcm/events",
-        ).setStreamHandler(PlaybackCaptureBridge)
-
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            "kinetic_lyrics/pcm/methods",
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "startCapture" -> {
-                    PlaybackCaptureBridge.request(this, call.argument<String>("sourcePackage"))
-                    result.success(null)
-                }
-                "stopCapture" -> {
-                    PlaybackCaptureBridge.stop(notify = true)
-                    stopService(Intent(this, PlaybackCaptureService::class.java))
-                    result.success(null)
-                }
-                else -> result.notImplemented()
-            }
-        }
-
-        EventChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
             "kinetic_lyrics/audio/events",
         ).setStreamHandler(DeviceAudioBridge)
 
@@ -209,30 +193,8 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Android")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PlaybackCaptureBridge.requestCode) {
-            val stillRequested = PlaybackCaptureBridge.permissionResult(
-                resultCode == RESULT_OK && data != null,
-            )
-            if (stillRequested && resultCode == RESULT_OK && data != null) {
-                val service = Intent(this, PlaybackCaptureService::class.java)
-                    .putExtra(PlaybackCaptureService.extraResultCode, resultCode)
-                    .putExtra(PlaybackCaptureService.extraPermissionData, data)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(service)
-                } else {
-                    startService(service)
-                }
-            }
-        }
-    }
-
     override fun onDestroy() {
         DeviceAudioBridge.stop()
-        PlaybackCaptureBridge.stop()
-        stopService(Intent(this, PlaybackCaptureService::class.java))
         super.onDestroy()
     }
 }

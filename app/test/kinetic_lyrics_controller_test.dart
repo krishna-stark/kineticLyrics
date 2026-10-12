@@ -6,7 +6,6 @@ import 'package:kinetic_lyrics/semantics/song_semantic_profile.dart';
 import 'package:kinetic_lyrics/audio/audio_analyzer.dart';
 import 'package:kinetic_lyrics/audio/audio_features.dart';
 import 'package:kinetic_lyrics/app/kinetic_lyrics_controller.dart';
-import 'package:kinetic_lyrics/learning/on_device_lyrics_learner.dart';
 import 'package:kinetic_lyrics/lyrics/data/lyrics_provider.dart';
 import 'package:kinetic_lyrics/lyrics/data/lyrics_repository.dart';
 import 'package:kinetic_lyrics/lyrics/domain/lyric_timeline.dart';
@@ -130,45 +129,6 @@ void main() {
     },
   );
   test(
-    'missing lyrics require explicit consent before capture starts',
-    () async {
-      final detector = _FakeNowPlayingDetector();
-      final learner = _FakeLearner();
-      final controller = KineticLyricsController(
-        nowPlaying: detector,
-        lyrics: LyricsRepository(providers: const [_MissingProvider()]),
-        learner: learner,
-      )..initialize();
-
-      detector.add(
-        NowPlayingSnapshot(
-          access: NowPlayingAccess.granted,
-          track: NowPlayingTrack(
-            sourcePackage: 'player',
-            sourceName: 'Player',
-            title: 'Missing Song',
-            artist: 'Artist',
-            album: null,
-            duration: const Duration(minutes: 3),
-            position: const Duration(seconds: 8),
-            playbackSpeed: 1,
-            state: PlaybackStatus.playing,
-            receivedAt: DateTime.now(),
-          ),
-        ),
-      );
-      await _settle();
-
-      expect(controller.lyricsState, LyricsLoadState.notFound);
-      expect(learner.starts, 0);
-      await controller.startLearningLyrics();
-      expect(learner.starts, 1);
-      controller.dispose();
-      await detector.close();
-    },
-  );
-
-  test(
     'a paused track change clears old lyrics and loads the new track',
     () async {
       final detector = _FakeNowPlayingDetector();
@@ -232,73 +192,6 @@ void main() {
     controller.dispose();
     await detector.close();
   });
-
-  test(
-    'AI drafts keep the song clock and reject stale track results',
-    () async {
-      final detector = _FakeNowPlayingDetector();
-      final learner = _FakeLearner();
-      final controller = KineticLyricsController(
-        nowPlaying: detector,
-        lyrics: LyricsRepository(providers: const [_MissingProvider()]),
-        learner: learner,
-      )..initialize();
-
-      detector.add(
-        NowPlayingSnapshot(
-          access: NowPlayingAccess.granted,
-          track: NowPlayingTrack(
-            sourcePackage: 'player',
-            sourceName: 'Player',
-            title: 'Recovered Song',
-            artist: 'Artist',
-            album: null,
-            duration: const Duration(minutes: 3),
-            position: const Duration(seconds: 8),
-            playbackSpeed: 1,
-            state: PlaybackStatus.playing,
-            receivedAt: DateTime.now(),
-          ),
-        ),
-      );
-      await _settle();
-
-      const partial = LyricTimeline(
-        provider: 'on-device-ai',
-        quality: LyricsTimingQuality.estimated,
-        lines: [
-          LyricLine(
-            text: 'a recovered lyric',
-            start: Duration(seconds: 7),
-            end: Duration(seconds: 10),
-          ),
-        ],
-      );
-      learner.emit(
-        const LearningStatus(
-          LearningState.listening,
-          partialTimeline: partial,
-          trackKey: 'a different song',
-        ),
-      );
-      await _settle();
-      expect(controller.timeline, isNull);
-      learner.emit(
-        const LearningStatus(LearningState.listening, partialTimeline: partial),
-      );
-      await _settle();
-
-      expect(controller.lyricsState, LyricsLoadState.ready);
-      expect(controller.timeline, partial);
-      expect(
-        controller.learningPreviewPosition,
-        isNull,
-        reason: 'Delayed ASR must never replace the actual song clock.',
-      );
-      controller.dispose();
-      await detector.close();
-    },
-  );
 }
 
 class _TestAudio implements AudioAnalyzer {
@@ -334,37 +227,6 @@ class _FakeNowPlayingDetector implements NowPlayingDetector {
 
   @override
   void dispose() {}
-}
-
-class _MissingProvider implements LyricsProvider {
-  const _MissingProvider();
-
-  @override
-  String get id => 'missing';
-
-  @override
-  Future<LyricTimeline?> find(TrackIdentity track) async => null;
-}
-
-class _FakeLearner implements LyricsLearner {
-  final _statuses = StreamController<LearningStatus>.broadcast();
-  int starts = 0;
-
-  void emit(LearningStatus status) => _statuses.add(status);
-
-  @override
-  Stream<LearningStatus> get statuses => _statuses.stream;
-
-  @override
-  Future<void> start(TrackIdentity track, Duration currentPosition) async {
-    starts++;
-  }
-
-  @override
-  Future<LyricTimeline?> finish({bool stopCapture = false}) async => null;
-
-  @override
-  Future<void> dispose() => _statuses.close();
 }
 
 NowPlayingSnapshot _snapshot(

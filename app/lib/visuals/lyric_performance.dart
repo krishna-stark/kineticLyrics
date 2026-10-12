@@ -237,7 +237,7 @@ class LyricPerformance {
       canvas.transform(transform.storage);
       canvas.translate(-rect.center.dx, -rect.center.dy);
       if (pose.reveal < 1) {
-        final padded = rect.inflate(3);
+        final padded = rect.inflate(item.rasterPadding);
         final reveal = switch (shot.travel) {
           LyricTravel.leftToRight => Rect.fromLTWH(
             padded.left,

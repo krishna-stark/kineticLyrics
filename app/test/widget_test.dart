@@ -143,53 +143,43 @@ void main() {
     await detector.close();
   });
 
-  testWidgets('missing lyrics keep one surface and require AI consent', (
-    tester,
-  ) async {
-    _phoneViewport(tester);
-    final detector = TestDetector();
-    final controller = KineticLyricsController(
-      nowPlaying: detector,
-      lyrics: LyricsRepository(providers: []),
-    );
-    await tester.pumpWidget(KineticLyricsApp(controller: controller));
-    detector.add(
-      NowPlayingSnapshot(
-        access: NowPlayingAccess.granted,
-        track: TestDetector.track(),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byType(MusicSurface), findsOneWidget);
-    expect(
-      find.text('Lyrics unavailable · instrumental experience'),
-      findsNothing,
-    );
-    await tester.tapAt(const Offset(180, 400));
-    await tester.pump();
-    expect(
-      find.text('Lyrics unavailable · instrumental experience'),
-      findsOneWidget,
-    );
-    await tester.tap(find.text('Learn lyrics on device'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Create a local lyric draft'), findsOneWidget);
-    expect(
-      find.textContaining('Captured audio is never uploaded'),
-      findsOneWidget,
-    );
-    await tester.ensureVisible(find.text('Keep the instrumental experience'));
-    await tester.tap(find.text('Keep the instrumental experience'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Create a local lyric draft'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    controller.dispose();
-    await detector.close();
-  });
+  testWidgets(
+    'missing lyrics keep visuals without audio capture or learning controls',
+    (tester) async {
+      _phoneViewport(tester);
+      final detector = TestDetector();
+      final controller = KineticLyricsController(
+        nowPlaying: detector,
+        lyrics: LyricsRepository(providers: []),
+      );
+      await tester.pumpWidget(KineticLyricsApp(controller: controller));
+      detector.add(
+        NowPlayingSnapshot(
+          access: NowPlayingAccess.granted,
+          track: TestDetector.track(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(MusicSurface), findsOneWidget);
+      expect(
+        find.text('Lyrics unavailable · instrumental experience'),
+        findsNothing,
+      );
+      await tester.tapAt(const Offset(180, 400));
+      await tester.pump();
+      expect(
+        find.text('Lyrics unavailable · instrumental experience'),
+        findsOneWidget,
+      );
+      expect(find.text('Learn lyrics on device'), findsNothing);
+      expect(find.text('Retry lyrics'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+      await detector.close();
+    },
+  );
 }
 
 class TestDetector implements NowPlayingDetector {

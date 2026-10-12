@@ -5,6 +5,12 @@ abstract interface class JsonHttpClient {
   Future<Object?> get(Uri uri);
 }
 
+class LyricsHttpException extends HttpException {
+  LyricsHttpException(this.statusCode, Uri uri)
+    : super('Lyrics service returned $statusCode', uri: uri);
+  final int statusCode;
+}
+
 class DartJsonHttpClient implements JsonHttpClient {
   DartJsonHttpClient({HttpClient? client}) : _client = client ?? HttpClient();
 
@@ -23,10 +29,7 @@ class DartJsonHttpClient implements JsonHttpClient {
         .join()
         .timeout(const Duration(seconds: 10));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw HttpException(
-        'Lyrics service returned ${response.statusCode}',
-        uri: uri,
-      );
+      throw LyricsHttpException(response.statusCode, uri);
     }
     return jsonDecode(body);
   }

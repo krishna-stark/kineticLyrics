@@ -42,17 +42,22 @@ class ComposedWord {
   bool rasterAttempted = false;
   bool _disposed = false;
 
+  // Script marks and italic overhang can extend beyond TextPainter.size.
+  double get rasterPadding =>
+      math.max(6, (painter.text?.style?.fontSize ?? 40) * .35);
+
   Future<void> rasterize(double pixelRatio) async {
     if (_disposed || rasterAttempted) return;
     rasterAttempted = true;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(pixelRatio);
-    painter.paint(canvas, const Offset(3, 3));
+    final pad = rasterPadding;
+    painter.paint(canvas, Offset(pad, pad));
     final picture = recorder.endRecording();
     try {
       final image = await picture.toImage(
-        ((painter.width + 6) * pixelRatio).ceil(),
-        ((painter.height + 6) * pixelRatio).ceil(),
+        ((painter.width + pad * 2) * pixelRatio).ceil(),
+        ((painter.height + pad * 2) * pixelRatio).ceil(),
       );
       if (_disposed) {
         image.dispose();
@@ -69,12 +74,18 @@ class ComposedWord {
   void paint(Canvas canvas, double opacity) {
     final image = _raster;
     if (image == null) {
-      PlainType.paint(canvas, painter, origin, bounds, opacity: opacity);
+      PlainType.paint(
+        canvas,
+        painter,
+        origin,
+        bounds.inflate(rasterPadding),
+        opacity: opacity,
+      );
     } else {
       canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        bounds.inflate(3),
+        bounds.inflate(rasterPadding),
         Paint()
           ..color = Colors.white.withValues(alpha: opacity)
           ..filterQuality = FilterQuality.low,
@@ -424,7 +435,7 @@ class LyricComposition {
           fontSize: size,
           height:
               RegExp(r'[\u0900-\u097F\u0B80-\u0C7F]').hasMatch(group[i].text)
-              ? 1.18
+              ? null
               : 1.04,
           fontWeight: i == hero ? FontWeight.w700 : FontWeight.w500,
           letterSpacing:

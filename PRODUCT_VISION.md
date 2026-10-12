@@ -93,8 +93,8 @@ Rotation is allowed only when the lyric meaning genuinely calls for it and only 
 - On-device AI may select objects based on lyrical context.
 - Show at most one primary and one secondary object simultaneously.
 - Objects stay behind the lyrics and never reduce readability.
-- Objects persist for approximately 8–20 seconds rather than changing every line.
-- Low-confidence context falls back to abstract mood geometry.
+- Objects follow literal word cues and clear when a line no longer supports them. Avoid rapid changes within a phrase.
+- Low-confidence object context stays empty rather than inserting unrelated props.
 - Objects react through lighting, depth, deformation, particles, or breathing.
 - Literal objects remain restrained. A reference to guns and roses may introduce those motifs without turning the screen into a loud illustration.
 
@@ -117,8 +117,9 @@ Rotation is allowed only when the lyric meaning genuinely calls for it and only 
 - Instrumental passages receive a fluid, music-sensitive visualizer.
 - Missing lyrics continue with a complete instrumental experience.
 - Track metadata does not become a large static substitute for lyrics.
-- On-device AI transcription remains optional.
-- Partial AI lyrics appear only when stable enough to read.
+- Lyrics come from multiple published sources; prefer real synchronized timestamps.
+- Plain lyrics remain readable in a manual reading view. Do not invent song synchronization.
+- On-device lyric transcription and playback capture are removed.
 
 ## 10. Required application states
 
@@ -131,11 +132,8 @@ The UI deliberately handles:
 - Lyrics loading.
 - Lyrics ready.
 - Lyrics unavailable.
-- AI model preflight.
-- AI model download.
-- Audio-capture permission.
-- AI listening.
-- Partial AI lyrics.
+- Visualizer audio-access explanation.
+- Background semantic object analysis.
 - Instrumental sections.
 - Paused playback.
 - Seeking.
@@ -217,14 +215,7 @@ No state may appear broken, corrupted, accidental, or unfinished.
 
 ## 17. AI privacy and responsibility
 
-Before AI transcription begins, explain:
-
-- An approximately 80 MB model must be downloaded once.
-- Android will request playback-audio capture.
-- Recognition happens locally.
-- Captured audio is not uploaded.
-- Generated lyrics and timing are stored locally.
-- The user can cancel or retry.
+AI interprets published lyric text for visual direction locally. No singing transcription or playback-audio capture is performed. Song metadata may be used for lyric lookups and background artwork searches. Visualizer audio access remains separate from lyrics.
 
 Never expose raw technical exceptions. Errors explain what happened and what the user can do next.
 

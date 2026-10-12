@@ -60,7 +60,7 @@ class OnDeviceE5SemanticAnalyzer implements LyricSemanticAnalyzer {
     // Include lyric content: recovered/corrected lyrics must not reuse an old
     // profile merely because their media metadata is unchanged.
     final cacheKey =
-        '${track.cacheKey}:director-v8:${_stableHash(timeline.lines.map((line) => line.text).join('\n'))}';
+        '${track.cacheKey}:director-v9:${_stableHash(timeline.lines.map((line) => line.text).join('\n'))}';
     final cached = await _loadCache(cacheKey, track.cacheKey);
     if (cached != null) return cached;
     final stopwatch = Stopwatch()..start();
@@ -322,7 +322,7 @@ class OnDeviceE5SemanticAnalyzer implements LyricSemanticAnalyzer {
     required double threshold,
     required List<double> neutralBaseline,
   }) {
-    final normalized = source.toLowerCase();
+    final grounded = lexicalObjectsFor(source, limit: 40).toSet();
     return const SemanticObjectRanker().select(
       [
         for (var index = 0; index < _objectPrototypes.length; index++)
@@ -330,7 +330,7 @@ class OnDeviceE5SemanticAnalyzer implements LyricSemanticAnalyzer {
             kind: _objectPrototypes[index].kind,
             similarity: _cosine(vector, prototypes[index]),
             neutralSimilarity: neutralBaseline[index],
-            explicitAnchor: _objectAnchor(normalized, _objectPrototypes[index]),
+            explicitAnchor: grounded.contains(_objectPrototypes[index].kind),
           ),
       ],
       limit: limit,
@@ -370,18 +370,45 @@ class OnDeviceE5SemanticAnalyzer implements LyricSemanticAnalyzer {
     String text, {
     int limit = 1,
   }) {
-    final normalized = text.toLowerCase();
-    return _objectPrototypes
-        .where((prototype) => _objectAnchor(normalized, prototype))
-        .take(limit)
-        .map((prototype) => prototype.kind)
-        .toList();
+    return lexicalMentionsFor(
+      text,
+    ).map((mention) => mention.kind).toSet().take(limit).toList();
   }
 
-  static bool _objectAnchor(String text, _ObjectPrototype prototype) =>
-      _hasAnchor(text, prototype.anchors) ||
-      _hasAnchor(text, romanizedObjectAnchors[prototype.kind] ?? const []);
-  static bool _hasAnchor(String text, List<String> anchors) => LyricCues.contains(text,anchors);
+  /// Prefer the longest literal phrase at each position, not library order.
+  /// Suppress directly negated English nouns; other languages stay conservative.
+  static List<ObjectMention> lexicalMentionsFor(String text) {
+    final normalized = text.toLowerCase();
+    final candidates = <ObjectMention>[];
+    for (final prototype in _objectPrototypes) {
+      for (final match in LyricCues.matches(normalized, [
+        ...prototype.anchors,
+        ...?romanizedObjectAnchors[prototype.kind],
+      ])) {
+        final before = normalized.substring(0, match.start).trimRight();
+        if (RegExp(
+          r"(?:^|\s)(?:no|without|not)(?:\s+(?:a|the|any))?$",
+        ).hasMatch(before)) {
+          continue;
+        }
+        candidates.add(ObjectMention(prototype.kind, match.start, match.end));
+      }
+    }
+    candidates.sort((a, b) {
+      final position = a.start.compareTo(b.start);
+      return position != 0 ? position : b.end.compareTo(a.end);
+    });
+    final result = <ObjectMention>[];
+    for (final candidate in candidates) {
+      if (result.isNotEmpty && candidate.start < result.last.end) continue;
+      if (result.isNotEmpty && candidate.kind == result.last.kind) continue;
+      result.add(candidate);
+    }
+    return result;
+  }
+
+  static bool _hasAnchor(String text, List<String> anchors) =>
+      LyricCues.contains(text, anchors);
 
   SemanticMotionPath _lexicalMotion(String text) {
     final value = text.toLowerCase();
@@ -803,6 +830,36 @@ const _objectPrototypes = <_ObjectPrototype>[
       'गीत',
     ],
   ),
+  _ObjectPrototype(
+    BackgroundObjectKind.guitar,
+    'a guitar, guitar strings, a guitarist playing a string instrument',
+    ['guitar', 'guitars', 'గిటార్', 'கிட்டார்', 'गिटार'],
+  ),
+  _ObjectPrototype(
+    BackgroundObjectKind.umbrella,
+    'an umbrella sheltering someone from rain',
+    ['umbrella', 'గొడుగు', 'குடை', 'छाता'],
+  ),
+  _ObjectPrototype(
+    BackgroundObjectKind.candle,
+    'a burning candle, candlelight and a lamp wick in the darkness',
+    ['candle', 'candlelight', 'దీపం', 'விளக்கு', 'मोमबत्ती', 'दीया'],
+  ),
+  _ObjectPrototype(
+    BackgroundObjectKind.feather,
+    'a feather, a light plume drifting through the air',
+    ['feather', 'feathers', 'ఈక', 'இறகு'],
+  ),
+  _ObjectPrototype(
+    BackgroundObjectKind.desert,
+    'a desert, sand dunes and dry endless sands',
+    ['desert', 'dunes', 'ఎడారి', 'பாலைவனம்', 'रेगिस्तान'],
+  ),
+  _ObjectPrototype(
+    BackgroundObjectKind.dancer,
+    'a dancer, dancing together, rhythmic movement of a human body',
+    ['dance', 'dancer', 'dancing', 'నాట్యం', 'నృత్యం', 'நடனம்', 'नाच', 'नृत्य'],
+  ),
 ];
 
 const _motionPrototypes = <_MotionPrototype>[
@@ -847,3 +904,10 @@ const _motionPrototypes = <_MotionPrototype>[
     'silence, waiting, peace, stopping and emptiness',
   ),
 ];
+
+class ObjectMention {
+  const ObjectMention(this.kind, this.start, this.end);
+  final BackgroundObjectKind kind;
+  final int start;
+  final int end;
+}

@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
@@ -6,6 +7,70 @@ class ContextAssetStore {
   static const license = 'CC0-1.0';
   static Set<String> get availableIds => Set.unmodifiable(_paths.keys);
   static final Map<String, Path> _paths = {
+    'umbrella': Path()
+      ..moveTo(-1, -.05)
+      ..cubicTo(-.75, -1.1, .75, -1.1, 1, -.05)
+      ..quadraticBezierTo(.65, -.3, .34, -.05)
+      ..quadraticBezierTo(0, -.3, -.34, -.05)
+      ..quadraticBezierTo(-.65, -.3, -1, -.05)
+      ..moveTo(0, -.82)
+      ..lineTo(0, .7)
+      ..cubicTo(0, 1.15, .5, 1.15, .5, .7),
+    'candle': Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(-.28, -.25, .56, 1.1),
+          const Radius.circular(.08),
+        ),
+      )
+      ..moveTo(0, -.26)
+      ..lineTo(0, -.42)
+      ..moveTo(0, -.95)
+      ..cubicTo(-.5, -.48, -.25, -.35, 0, -.4)
+      ..cubicTo(.3, -.42, .3, -.62, 0, -.95)
+      ..moveTo(-.6, .9)
+      ..lineTo(.6, .9),
+    'feather': Path()
+      ..moveTo(-.7, .9)
+      ..lineTo(.65, -.85)
+      ..moveTo(-.52, .65)
+      ..cubicTo(-1, -.1, -.4, -1.25, .72, -.9)
+      ..cubicTo(1.1, -.1, .6, .6, -.52, .65)
+      ..moveTo(-.35, .43)
+      ..lineTo(-.62, -.03)
+      ..moveTo(-.03, .03)
+      ..lineTo(-.12, -.55)
+      ..moveTo(.28, -.35)
+      ..lineTo(.24, -.85)
+      ..moveTo(-.2, .26)
+      ..lineTo(.5, .17),
+    'desert': Path()
+      ..moveTo(-1, .55)
+      ..cubicTo(-.3, -.2, .15, -.2, .85, .5)
+      ..moveTo(-1, .85)
+      ..cubicTo(-.3, .1, .4, .35, 1, .85)
+      ..moveTo(-.45, .1)
+      ..cubicTo(.2, -.75, .65, -.2, 1, .4)
+      ..addOval(const Rect.fromLTWH(-.85, -.9, .35, .35)),
+    'dancer': Path()
+      ..addOval(const Rect.fromLTWH(-.15, -.95, .3, .3))
+      ..moveTo(-.1, -.6)
+      ..lineTo(-.4, -.05)
+      ..lineTo(.15, .1)
+      ..lineTo(.3, -.5)
+      ..close()
+      ..moveTo(-.25, -.4)
+      ..lineTo(-.72, -.7)
+      ..lineTo(-.9, -.4)
+      ..moveTo(.25, -.4)
+      ..lineTo(.7, -.7)
+      ..lineTo(.82, -.95)
+      ..moveTo(-.3, .02)
+      ..lineTo(-.7, .55)
+      ..lineTo(-.5, .95)
+      ..moveTo(.1, .1)
+      ..lineTo(.65, .55)
+      ..lineTo(.95, .6),
     'guitar': Path()
       ..moveTo(-.55, .9)
       ..cubicTo(-1.1, .35, -.9, -.25, -.38, -.12)
@@ -446,13 +511,37 @@ class ContextAssetStore {
     String id,
     Offset center,
     double radius,
-    double opacity,
-  ) {
+    double opacity, {
+    double time = 0,
+    double energy = 0,
+  }) {
     final asset = _paths[id];
     if (asset == null) return;
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.scale(radius);
+    final floating = {
+      'moon',
+      'cloud',
+      'bird',
+      'butterfly',
+      'leaf',
+      'wings',
+      'stars',
+      'feather',
+    }.contains(id);
+    if (floating) {
+      canvas.translate(
+        math.sin(time * .65) * radius * .035,
+        math.cos(time * .5) * radius * .025,
+      );
+      canvas.rotate(math.sin(time * .45) * (id == 'butterfly' ? .07 : .025));
+    } else if (id == 'tree' || id == 'flower' || id == 'rose') {
+      canvas.rotate(math.sin(time * .5) * .025);
+    }
+    final pulse = {'heart', 'flame', 'lightning'}.contains(id)
+        ? energy.clamp(0, 1) * .035
+        : 0.0;
+    canvas.scale(radius * (1 + pulse));
     // A dimensional silhouette has a dark red offset face and a clear contour.
     canvas.drawPath(
       asset.shift(const Offset(.06, .08)),
@@ -467,17 +556,19 @@ class ContextAssetStore {
         Paint()
           ..color = const Color(
             0xffe95252,
-          ).withValues(alpha: opacity * (id == 'raisedFist' ? .65 : .18)),
+          ).withValues(alpha: opacity * (id == 'raisedFist' ? .65 : .12)),
       );
     }
     canvas.drawPath(
       asset,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 / math.max(1, radius)
-        ..color = const Color(
-          0xffe95252,
-        ).withValues(alpha: opacity.clamp(0, .32)),
+        ..strokeWidth = 1.5 / math.max(1, radius)
+        ..shader =
+            ui.Gradient.linear(const Offset(-.7, -.9), const Offset(.8, .9), [
+              const Color(0xffeeeeee).withValues(alpha: opacity.clamp(0, .42)),
+              const Color(0xffd96161).withValues(alpha: opacity.clamp(0, .32)),
+            ]),
     );
     canvas.restore();
   }
